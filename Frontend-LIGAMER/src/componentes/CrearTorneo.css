@@ -1,0 +1,68 @@
+
+
+
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+.crear-torneo {
+  font-family: 'anton', sans-serif;
+}
+
+/* CrearTorneo.css */
+.modal-backdrop {
+  background-color: rgb(0, 0, 0) !important;
+}
+
+input, select, textarea {
+  background-color: white;
+  color: rgb(50, 48, 48);
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(48%) sepia(13%) saturate(3207%) hue-rotate(130deg) brightness(95%) contrast(80%); /* Cambia el color */
+}
+
+.btnn{
+  width: 100%;
+  transition: .5s;
+}
+
+.btnn:hover{
+  width: 100%;
+  transform: scale(1.05);
+}
+
+.cancelar{
+  background-color: red ;
+  border: red 1px;
+
+}
+
+.generar{
+ background-color: rgb(2, 7, 34);
+  border: solid rgb(0, 166, 166) 1px;
+}
+
+.guardar{
+  background-color: rgb(74, 50, 135) ;
+}
+
+.crear{
+  background-color: rgb(0, 166, 166);
+}
+
+
+.cancelar:hover{
+  background-color: red ;
+  border: red 1px;
+}
+.generar:hover{
+ background-color: rgb(2, 7, 34);
+  border: solid rgb(0, 166, 166) 1px;
+}
+
+.guardar:hover{
+  background-color: rgb(74, 50, 135) ;
+}
+
+.crear:hover{
+  background-color: rgb(0, 166, 166);
+}

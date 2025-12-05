@@ -1,0 +1,33 @@
+.register-card { background-color: transparent; }
+.register-left { background-color: #002733; color: black; }
+.register-right { background-color: #00A6A6; width: 220px; position: relative; }
+.eye-btn {
+  position: absolute;
+  right: 10px;
+  top: 36px;
+  background: transparent;
+  border: none;
+  color: black !important;
+  font-size: 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  cursor: pointer;
+}
+.btn-register {
+  background-color: #4A3287;
+  color: white;
+  border: none;
+}
+.version-text {
+  position: absolute;
+  bottom: 8px;
+  right: 10px;
+  color: #042b2b;
+  font-weight: 600;
+}
+
+@media (max-width: 767px) {
+  .register-right { display: none !important; }
+}

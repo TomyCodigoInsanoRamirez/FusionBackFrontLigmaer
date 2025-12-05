@@ -1,0 +1,39 @@
+.dashboard-container {
+  width: 95%;
+  margin: 20px auto;
+  padding: 20px;
+  background: #1a1a1a; /* Fondo oscuro para estética gaming */
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  color: #fff;
+}
+
+.dashboard-container h1 {
+  text-align: center;
+  font-size: 24px;
+  margin-bottom: 20px;
+  color: #00a6a6; /* Color teal inspirado en tu tabla anterior */
+}
+
+.charts-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap; /* Responsive para pantallas pequeñas */
+}
+
+.charts-row > * {
+  flex: 1;
+  min-width: 300px; /* Evita que se encojan demasiado */
+}
+
+.charts-full {
+  margin-top: 20px;
+}
+
+.chart-container {
+  background: #2a2a2a; /* Fondo gris oscuro para cada gráfico */
+  border-radius: 8px;
+  padding: 15px;
+  border: 2px solid #00a6a6; /* Borde teal */
+}
