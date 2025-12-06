@@ -55,7 +55,8 @@ export default function TorneosDisponibles({ title, children }) {
         const isOwner = payload?.isOwner ?? payload?.data?.isOwner;
         const ownedTeamIdApi = payload?.ownedTeam?.id || payload?.data?.ownedTeam?.id;
         const ownedTeamId = ownedTeamIdApi || user?.ownedTeam?.id || user?.teamId;
-
+        console.log("DATA PAYOAD: "+JSON.stringify(payload))
+        console.log("DATA PAYOAD sin parseo: "+payload)
         if (!isOwner || !ownedTeamId) {
           MySwal.fire({
             icon: 'warning',

@@ -57,6 +57,7 @@ export default function CrearTorneo({ estado = "Nuevo" }) {
   const hasGenerated = useRef(false);
   const mappedDatesRef = useRef(false);
   const [data, setData] = useState({});
+  const [pendingTeams, setPendingTeams] = useState([]); // equipos que llegan del backend
 
   // Genera un objeto matchDates con TODAS las claves posibles y valor vacío
 const generateEmptyMatchDates = () => {
@@ -177,52 +178,14 @@ const generateEmptyMatchDates = () => {
 
           // Cargar equipos si existen (solo "En curso")
           if (data.data.teams && data.data.teams.length > 0) {
-            window.__equiposTemporales = data.data.teams;
+            setPendingTeams(data.data.teams);
           }
+
+          // Forzamos la generación del bracket con los datos cargados
+          hasGenerated.current = true;
+          setGenerateTrigger(prev => prev + 1);
         })
           .catch((err) => console.log(err));
-                  
-        // Cargar datos básicos del torneo
-        setTournamentName(data.tournamentName || 'Sin nombre de torneo');
-        setDescription(data.description || '');
-        setNumTeams(data.numTeams || 8);
-        setStartDate(data.startDate || '');
-        setEndDate(data.endDate || '');
-        setRegistrationCloseDate(data.registrationCloseDate || '');
-        setRuleList(data.ruleList || []);
-
-        // Cargar fechas de partidos (pueden estar incompletas)
-        setMatchDates(data.matchDates || {});
-
-        // Cargar resultados (solo en "En curso")
-        setMatches(data.matches || {});
-
-        // Cargar equipos si existen (solo "En curso")
-        if (data.teams && data.teams.length > 0) {
-          window.__equiposTemporales = data.teams;
-        }
-
-        // Forzamos la generación del bracket
-        hasGenerated.current = true;
-        setGenerateTrigger(prev => prev + 1);
-
-        // === FIX CLAVE: después de generar el bracket, completamos matchDates con todas las claves vacías ===
-        // Esto garantiza que SIEMPRE existan todas las keys, incluso si el usuario guardó a medias
-        const completarMatchDates = () => {
-          setMatchDates(prev => {
-            const completo = { ...prev };
-            // Recorremos todos los nodos generados
-            nodes.forEach(node => {
-              if (!(node.id in completo)) {
-                completo[node.id] = "";
-              }
-            });
-            return completo;
-          });
-        };
-
-        // Damos un pequeño delay para asegurar que los nodos ya existan
-        setTimeout(completarMatchDates, 150);
 
       } catch (err) {
         setError("Error al cargar el torneo. Por favor, intenta de nuevo.");
@@ -250,6 +213,17 @@ const generateEmptyMatchDates = () => {
       return;
     }
 
+    // Preparamos los equipos a enviar; usamos los que llegaron del backend o los que estén en el bracket
+    const teamsToSend = pendingTeams.length > 0
+      ? pendingTeams
+      : Array.from(
+          new Map(
+            Object.values(teamData)
+              .filter(Boolean)
+              .map((t) => [t.name, t])
+          ).values()
+        );
+
     const torneoData = {
       tournamentName,
       description,
@@ -259,6 +233,8 @@ const generateEmptyMatchDates = () => {
       registrationCloseDate,
       ruleList: [...ruleList],
       matchDates: { ...matchDates },
+      matches: { ...matches },
+      teams: teamsToSend,
       estado: "En curso",
       generadoEl: new Date().toISOString(),
     };
@@ -408,21 +384,20 @@ const generateEmptyMatchDates = () => {
 
   // ==================== ASIGNAR EQUIPOS EN "EN CURSO" ====================
   useEffect(() => {
-    if (estado === "En curso" && nodes.length > 0 && window.__equiposTemporales) {
+    if (estado === "En curso" && nodes.length > 0 && pendingTeams.length > 0) {
       const leaves = nodes
         .filter(d => !graph.parentToChildren[d.id])
         .sort((a, b) => a.y - b.y || a.x - b.x);
 
       const newTeamData = {};
-      window.__equiposTemporales.forEach((eq, i) => {
+      pendingTeams.forEach((eq, i) => {
         if (i < leaves.length) {
           newTeamData[leaves[i].id] = { name: eq.name, image: eq.image };
         }
       });
       setTeamData(newTeamData);
-      delete window.__equiposTemporales;
     }
-  }, [nodes, estado, graph]);
+  }, [nodes, estado, graph, pendingTeams]);
 
   // ==================== AVANCE AUTOMÁTICO DE GANADORES AL CARGAR "En curso" ====================
 useEffect(() => {
