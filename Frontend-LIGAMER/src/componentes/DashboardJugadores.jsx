@@ -18,8 +18,8 @@ export default function DashboardJugadores() {
     { key: "nombre", label: "Nombre" },
     { key: "teamName", label: "Equipo" },
     { key: "teamMemberCount", label: "Miembros del equipo" },
-    { key: "active", label: "Ganadas" },
-    { key: "active", label: "Perdidas" },
+    { key: "victorias", label: "Ganadas" },
+    { key: "derrotas", label: "Perdidas" },
     { key: "Acciones", label: "Acciones" }
   ];
   const datos = [
@@ -40,7 +40,13 @@ export default function DashboardJugadores() {
       async function fetchUsers() {
         try {
           const usersData = await getAllUsers();
-          setUsers(usersData);
+          const normalized = (usersData || []).map((u) => ({
+            ...u,
+            victorias: u.victorias ?? 0,
+            derrotas: u.derrotas ?? 0,
+            nombre: u.nombre || `${u.username || ''}`.trim() || u.email,
+          }));
+          setUsers(normalized);
         } catch (error) {
           console.error("Error fetching users:", error);
         }

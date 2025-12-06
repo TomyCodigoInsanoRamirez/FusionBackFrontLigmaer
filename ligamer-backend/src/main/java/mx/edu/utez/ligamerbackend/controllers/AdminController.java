@@ -33,10 +33,6 @@ public class AdminController {
         User requester = userService.findByEmail(email);
         return requester.getRole() != null && AppConstants.ROLE_ADMINISTRADOR.equals(requester.getRole().getName());
     }
-
-    @Autowired
-    private mx.edu.utez.ligamerbackend.repositories.MatchRepository matchRepository;
-
     @GetMapping
     public ResponseEntity<?> listUsers() {
         try {
@@ -73,18 +69,14 @@ public class AdminController {
                     m.put("teamId", t.getId());
                     m.put("teamName", t.getName());
                     m.put("teamMemberCount", t.getMembers() != null ? t.getMembers().size() : 0);
-
-                    Integer wins = matchRepository.countTotalWins(t.getId());
-                    Integer losses = matchRepository.countTotalLosses(t.getId());
-                    m.put("victorias", wins != null ? wins : 0);
-                    m.put("derrotas", losses != null ? losses : 0);
                 } else {
                     m.put("teamId", null);
                     m.put("teamName", null);
                     m.put("teamMemberCount", 0);
-                    m.put("victorias", 0);
-                    m.put("derrotas", 0);
                 }
+
+                m.put("victorias", u.getWins() != null ? u.getWins() : 0);
+                m.put("derrotas", u.getLosses() != null ? u.getLosses() : 0);
 
                 return m;
             }).collect(Collectors.toList());
@@ -145,20 +137,15 @@ public class AdminController {
             // Validar si es el owner
             boolean isOwner = userTeam.getOwner() != null && userTeam.getOwner().getId().equals(user.getId());
             m.put("isOwner", isOwner);
-
-            Integer wins = matchRepository.countTotalWins(userTeam.getId());
-            Integer losses = matchRepository.countTotalLosses(userTeam.getId());
-
-            m.put("victorias", wins != null ? wins : 0);
-            m.put("derrotas", losses != null ? losses : 0);
         } else {
             m.put("teamId", null);
             m.put("teamName", null);
             m.put("teamMemberCount", 0);
             m.put("isOwner", false);
-            m.put("victorias", 0);
-            m.put("derrotas", 0);
         }
+
+        m.put("victorias", user.getWins() != null ? user.getWins() : 0);
+        m.put("derrotas", user.getLosses() != null ? user.getLosses() : 0);
 
         return ResponseEntity.ok(m);
     }

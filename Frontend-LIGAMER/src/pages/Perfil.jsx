@@ -514,6 +514,7 @@ export default function PerfilUsuario() {
                 <div className="section-body">
                   <p><strong>Equipo:</strong> {informacionUsuario?.teamName || 'Sin equipo'}</p>
                   <p><strong>Victorias:</strong> {informacionUsuario?.victorias || 0}</p>
+                  <p><strong>Derrotas:</strong> {informacionUsuario?.derrotas || 0}</p>
                 </div>
               </div>
             </div>

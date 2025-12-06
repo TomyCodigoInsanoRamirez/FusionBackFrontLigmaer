@@ -51,7 +51,9 @@ export function AuthProvider({ children }) {
             nombre: profile.nombre,
             teamId: teamId,
             team: profile.team,
-            ownedTeam: profile.ownedTeam
+            ownedTeam: profile.ownedTeam,
+            wins: profile.wins ?? 0,
+            losses: profile.losses ?? 0
           });
           setLoading(false);
         })
@@ -106,7 +108,9 @@ export function AuthProvider({ children }) {
         nombre: profile.nombre,
         teamId: teamId,
         team: profile.team,
-        ownedTeam: profile.ownedTeam
+        ownedTeam: profile.ownedTeam,
+        wins: profile.wins ?? 0,
+        losses: profile.losses ?? 0
       };
       setUser(userObj);
       return userObj;

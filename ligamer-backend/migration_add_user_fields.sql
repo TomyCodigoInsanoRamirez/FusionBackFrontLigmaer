@@ -7,7 +7,9 @@
 ALTER TABLE users
 ADD COLUMN IF NOT EXISTS nombre VARCHAR(100),
 ADD COLUMN IF NOT EXISTS apellido_paterno VARCHAR(100),
-ADD COLUMN IF NOT EXISTS apellido_materno VARCHAR(100);
+ADD COLUMN IF NOT EXISTS apellido_materno VARCHAR(100),
+ADD COLUMN IF NOT EXISTS wins INTEGER DEFAULT 0 NOT NULL,
+ADD COLUMN IF NOT EXISTS losses INTEGER DEFAULT 0 NOT NULL;
 
 -- Actualizar los usuarios existentes con valores por defecto
 UPDATE users

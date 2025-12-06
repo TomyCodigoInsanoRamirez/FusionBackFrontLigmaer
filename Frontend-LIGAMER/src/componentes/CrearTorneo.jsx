@@ -94,6 +94,43 @@ export default function CrearTorneo({ estado = "Nuevo" }) {
     }
   };
 
+  const sortTeamsByName = (list = []) =>
+    [...list]
+      .filter(Boolean)
+      .sort((a, b) => (a?.name || '').localeCompare(b?.name || ''));
+
+  const buildTeamsPayload = (localTeamData = teamData) => {
+    const baseList = pendingTeams.length > 0
+      ? pendingTeams
+      : Object.values(localTeamData || {}).filter(Boolean);
+
+    const unique = new Map();
+    baseList.forEach((t) => {
+      if (!t || !t.name) return;
+      const key = t.name.toLowerCase();
+      if (!unique.has(key)) {
+        unique.set(key, { ...t, name: t.name });
+      }
+    });
+
+    return sortTeamsByName(Array.from(unique.values()));
+  };
+
+  const buildTournamentPayload = (matchesPayload = matches, localTeamData = teamData, estadoOverride = estado) => ({
+    tournamentName,
+    description,
+    numTeams,
+    startDate,
+    endDate,
+    registrationCloseDate,
+    ruleList: [...ruleList],
+    matchDates: { ...matchDates },
+    matches: { ...matchesPayload },
+    teams: buildTeamsPayload(localTeamData),
+    estado: estadoOverride,
+    generadoEl: new Date().toISOString(),
+  });
+
   // Genera un objeto matchDates con TODAS las claves posibles y valor vacío
 const generateEmptyMatchDates = () => {
   const empty = {};
@@ -248,31 +285,7 @@ const generateEmptyMatchDates = () => {
       return;
     }
 
-    // Preparamos los equipos a enviar; usamos los que llegaron del backend o los que estén en el bracket
-    const teamsToSend = pendingTeams.length > 0
-      ? pendingTeams
-      : Array.from(
-          new Map(
-            Object.values(teamData)
-              .filter(Boolean)
-              .map((t) => [t.name, t])
-          ).values()
-        );
-
-    const torneoData = {
-      tournamentName,
-      description,
-      numTeams,
-      startDate,
-      endDate,
-      registrationCloseDate,
-      ruleList: [...ruleList],
-      matchDates: { ...matchDates },
-      matches: { ...matches },
-      teams: teamsToSend,
-      estado: "En curso",
-      generadoEl: new Date().toISOString(),
-    };
+    const torneoData = buildTournamentPayload(matches, teamData, "En curso");
 
     const confirm = await MySwal.fire({
       title: '¿Guardar y salir?',
@@ -419,26 +432,87 @@ const generateEmptyMatchDates = () => {
 
   // ==================== ASIGNAR EQUIPOS EN "EN CURSO" ====================
   useEffect(() => {
-    if (estado === "En curso" && nodes.length > 0 && pendingTeams.length > 0) {
-      let cancelled = false;
-      const loadTeams = async () => {
-        const leaves = nodes
-          .filter(d => !graph.parentToChildren[d.id])
-          .sort((a, b) => a.y - b.y || a.x - b.x);
+    if (estado !== "En curso" || nodes.length === 0) return;
 
-        const newTeamData = {};
-        for (let i = 0; i < pendingTeams.length && i < leaves.length; i++) {
-          const eq = pendingTeams[i];
-          const imgUrl = await resolveImageWithAuth(eq.image);
-          newTeamData[leaves[i].id] = { name: eq.name, image: imgUrl };
-        }
-        if (!cancelled) setTeamData(newTeamData);
+    let cancelled = false;
+
+    const assignTeams = async () => {
+      const leaves = nodes
+        .filter((d) => !graph.parentToChildren[d.id])
+        .sort((a, b) => a.y - b.y || a.x - b.x);
+
+      const nodeIndex = new Map(nodes.map((n) => [n.id, n]));
+
+      const lookupSource = [
+        ...(pendingTeams || []),
+        ...Object.values(teamData || {}),
+      ];
+      const teamLookup = new Map(
+        lookupSource
+          .filter(Boolean)
+          .map((t) => [t.name?.toLowerCase?.() || '', t])
+      );
+
+      const tasks = [];
+      const nextTeamData = { ...teamData };
+      let changed = false;
+
+      const assignTeamToLeaf = (leafId, teamName) => {
+        if (!leafId || !teamName) return;
+        // No sobreescribir si ya hay equipo fijado en esa hoja
+        if (nextTeamData[leafId]?.name) return;
+
+        tasks.push(
+          (async () => {
+            const base = teamLookup.get(teamName.toLowerCase()) || { name: teamName };
+            const imgUrl = await resolveImageWithAuth(base.image);
+            return { leafId, team: { ...base, name: teamName, image: imgUrl } };
+          })()
+        );
+        changed = true;
       };
 
-      loadTeams();
-      return () => { cancelled = true; };
-    }
-  }, [nodes, estado, graph, pendingTeams]);
+      const sortChildren = (children) =>
+        [...children].sort((a, b) => {
+          const na = nodeIndex.get(a);
+          const nb = nodeIndex.get(b);
+          return (na?.y || 0) - (nb?.y || 0) || (na?.x || 0) - (nb?.x || 0);
+        });
+
+      // Mapear las llaves de partidos existentes a sus hijos (sin mover otras hojas)
+      Object.entries(matches || {}).forEach(([parentId, match]) => {
+        const children = graph.parentToChildren[parentId];
+        if (!children || children.length !== 2) return;
+        const [upper, lower] = sortChildren(children);
+        if (match.team1) assignTeamToLeaf(upper, match.team1);
+        if (match.team2) assignTeamToLeaf(lower, match.team2);
+      });
+
+      // Solo si es la carga inicial (sin asignaciones previas) rellenar hojas vacías con pendingTeams
+      const hasAnyLeaf = leaves.some((l) => nextTeamData[l.id]);
+      if (!hasAnyLeaf && (pendingTeams?.length || 0) > 0) {
+        const sortedPending = sortTeamsByName(pendingTeams);
+        const freeLeaves = leaves.filter((l) => !nextTeamData[l.id]);
+        for (let i = 0; i < freeLeaves.length && i < sortedPending.length; i++) {
+          assignTeamToLeaf(freeLeaves[i].id, sortedPending[i].name);
+        }
+      }
+
+      const resolved = await Promise.all(tasks);
+      resolved.forEach((item) => {
+        if (item?.leafId && item?.team) {
+          nextTeamData[item.leafId] = item.team;
+        }
+      });
+
+      if (!cancelled && changed) setTeamData(nextTeamData);
+    };
+
+    assignTeams();
+    return () => {
+      cancelled = true;
+    };
+  }, [estado, nodes, graph, pendingTeams, matches, teamData]);
 
   // ==================== AVANCE AUTOMÁTICO DE GANADORES AL CARGAR "En curso" ====================
 useEffect(() => {
@@ -570,7 +644,7 @@ useEffect(() => {
   };
 
   // ==================== GUARDAR PARTIDO (fechas o marcadores) ====================
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!selectedNode) return;
     const parentId = graph.childToParent[selectedNode];
     if (!parentId) {
@@ -609,7 +683,7 @@ useEffect(() => {
       }
 
       // 3. Confirmación antes de guardar
-      MySwal.fire({
+      const confirm = await MySwal.fire({
         title: '¿Confirmar resultado?',
         text: `${team1Input} ${s1} - ${s2} ${team2Input}`,
         icon: 'question',
@@ -619,39 +693,48 @@ useEffect(() => {
         confirmButtonColor: '#4A3287',
         cancelButtonColor: '#dc3545',
         reverseButtons: true
-      }).then((result) => {
-        if (result.isConfirmed) {
-          // Guardar datos
-          setMatches(prev => ({
-            ...prev,
-            [parentId]: {
-              team1: team1Input,
-              team2: team2Input,
-              score1: score1Input,
-              score2: score2Input,
-              date: dateInput
-            }
-          }));
-
-          let winnerData = null;
-          if (s1 > s2) winnerData = teamData[selectedNode];
-          else if (s2 > s1) winnerData = teamData[rivalId];
-
-          if (winnerData) {
-            setTeamData(prev => ({ ...prev, [parentId]: winnerData }));
-          }
-
-          // 4. Mensaje de éxito
-          MySwal.fire({
-            icon: 'success',
-            title: '¡Resultado guardado!',
-            text: 'El enfrentamiento se ha configurado correctamente.',
-            confirmButtonColor: '#4A3287'
-          });
-
-          handleCloseModal();
-        }
       });
+
+      if (!confirm.isConfirmed) return;
+
+      const updatedMatches = {
+        ...matches,
+        [parentId]: {
+          team1: team1Input,
+          team2: team2Input,
+          score1: score1Input,
+          score2: score2Input,
+          date: dateInput,
+        },
+      };
+
+      let winnerData = null;
+      if (s1 > s2) winnerData = teamData[selectedNode];
+      else if (s2 > s1) winnerData = teamData[rivalId];
+
+      const nextTeamData = winnerData ? { ...teamData, [parentId]: winnerData } : { ...teamData };
+
+      setMatches(updatedMatches);
+      if (winnerData) setTeamData(nextTeamData);
+
+      try {
+        const payload = buildTournamentPayload(updatedMatches, nextTeamData, "En curso");
+        await updateTournament(id, payload);
+        MySwal.fire({
+          icon: 'success',
+          title: '¡Resultado guardado!',
+          text: 'Se actualizó el partido y el bracket.',
+          confirmButtonColor: '#4A3287'
+        });
+        handleCloseModal();
+      } catch (error) {
+        MySwal.fire({
+          icon: 'error',
+          title: 'Error al guardar',
+          text: error?.response?.data?.message || 'No se pudo persistir el resultado.',
+          confirmButtonColor: '#4A3287'
+        });
+      }
     } else {
       // Validaciones para modo "Nuevo" o "Guardado"
       

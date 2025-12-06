@@ -22,9 +22,6 @@ public class TeamController {
     private TeamService teamService;
 
     @Autowired
-    private mx.edu.utez.ligamerbackend.repositories.MatchRepository matchRepository;
-
-    @Autowired
     private mx.edu.utez.ligamerbackend.services.FileStorageService fileStorageService;
 
     @PostMapping(consumes = { "multipart/form-data" })
@@ -123,13 +120,6 @@ public class TeamController {
     public ResponseEntity<?> getTeamMembers(@PathVariable Long teamId) {
         try {
             Team team = teamService.getTeam(teamId);
-
-            // Calcular estadísticas del equipo
-            Integer wins = matchRepository.countTotalWins(teamId);
-            Integer losses = matchRepository.countTotalLosses(teamId);
-            int teamWins = wins != null ? wins : 0;
-            int teamLosses = losses != null ? losses : 0;
-
             List<Map<String, Object>> members = team.getMembers().stream().map(u -> {
                 Map<String, Object> mu = new HashMap<>();
                 mu.put("id", u.getId());
@@ -138,9 +128,8 @@ public class TeamController {
                 mu.put("nombre", u.getNombre());
                 mu.put("apellidoPaterno", u.getApellidoPaterno());
                 mu.put("apellidoMaterno", u.getApellidoMaterno());
-                // Agregar estadísticas del equipo a cada miembro
-                mu.put("victorias", teamWins);
-                mu.put("derrotas", teamLosses);
+                mu.put("victorias", u.getWins() != null ? u.getWins() : 0);
+                mu.put("derrotas", u.getLosses() != null ? u.getLosses() : 0);
                 return mu;
             }).collect(Collectors.toList());
             return ResponseEntity.ok(members);

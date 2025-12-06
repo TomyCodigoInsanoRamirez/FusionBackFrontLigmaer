@@ -54,6 +54,12 @@ public class User implements UserDetails {
     @Column(name = "reset_password_token_expiry")
     private LocalDateTime resetPasswordTokenExpiry;
 
+    @Column(name = "wins", nullable = false, columnDefinition = "INT DEFAULT 0")
+    private Integer wins = 0;
+
+    @Column(name = "losses", nullable = false, columnDefinition = "INT DEFAULT 0")
+    private Integer losses = 0;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         System.out.println("🔍 DEBUG getAuthorities() - Email: " + this.email + ", Role: "

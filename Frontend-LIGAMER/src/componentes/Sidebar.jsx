@@ -186,10 +186,11 @@ export default function Sidebar({ menuItems = [] }) {
       setTorneoNotificaciones(prev => prev.filter(n => n.id !== requestId));
     } catch (error) {
       console.error('Error aceptando solicitud torneo:', error);
+      const msg = error?.response?.data?.message || error?.response?.data || error.message || 'No se pudo aceptar la solicitud';
       Swal.fire({
         icon: 'error',
         title: 'Error',
-        text: error.response?.data || 'No se pudo aceptar la solicitud',
+        text: msg,
         confirmButtonColor: '#4A3287'
       });
     } finally {
@@ -210,10 +211,11 @@ export default function Sidebar({ menuItems = [] }) {
       setTorneoNotificaciones(prev => prev.filter(n => n.id !== requestId));
     } catch (error) {
       console.error('Error rechazando solicitud torneo:', error);
+      const msg = error?.response?.data?.message || error?.response?.data || error.message || 'No se pudo rechazar la solicitud';
       Swal.fire({
         icon: 'error',
         title: 'Error',
-        text: error.response?.data || 'No se pudo rechazar la solicitud',
+        text: msg,
         confirmButtonColor: '#4A3287'
       });
     } finally {

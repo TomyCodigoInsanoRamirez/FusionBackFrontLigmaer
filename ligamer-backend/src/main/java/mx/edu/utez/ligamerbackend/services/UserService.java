@@ -252,6 +252,8 @@ public class UserService {
         dto.setEmail(user.getEmail());
         dto.setActive(user.isActive());
         dto.setRole(user.getRole().getName());
+        dto.setWins(user.getWins() != null ? user.getWins() : 0);
+        dto.setLosses(user.getLosses() != null ? user.getLosses() : 0);
 
         // Buscar el equipo del que es miembro
         try {

@@ -144,7 +144,7 @@ export async function respondTournamentJoinRequest(tournamentId, requestId, stat
     const response = await api.put(`/api/tournaments/${tournamentId}/join-requests/${requestId}`, { status });
     return response.data;
   } catch (error) {
-    console.error("Error respondiendo solicitud del torneo:", error);
+    console.error("Error respondiendo solicitud del torneo:", error?.response?.data || error);
     throw error;
   }
 }

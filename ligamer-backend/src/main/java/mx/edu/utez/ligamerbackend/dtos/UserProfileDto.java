@@ -18,4 +18,6 @@ public class UserProfileDto {
     private String role;
     private TeamInfoDto team;
     private TeamInfoDto ownedTeam;
+    private Integer wins;
+    private Integer losses;
 }

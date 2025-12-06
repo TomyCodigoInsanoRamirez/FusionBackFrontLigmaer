@@ -13,6 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.HashSet;
+import java.util.Set;
 import mx.edu.utez.ligamerbackend.dtos.TournamentDetailResponseDto;
 import mx.edu.utez.ligamerbackend.models.Team;
 import mx.edu.utez.ligamerbackend.repositories.TeamRepository;
@@ -402,6 +404,7 @@ public class TournamentService {
 
                                 // Si ya estaba finalizado, revertir y aplicar
                                 if (wasFinished) {
+                                    revertUserStatsForMatch(match, oldHomeScore, oldAwayScore);
                                     revertStandingsForMatch(match, oldHomeScore, oldAwayScore);
                                     updateStandingsForMatch(match);
                                 } else {
@@ -508,8 +511,22 @@ public class TournamentService {
 
         // Actualizar partidos
         if (dto.getMatches() != null) {
-            // Eliminar partidos existentes
+            // 1) Revertir estadísticas de usuarios de los partidos previos finalizados
+            List<Match> previousMatches = matchRepository.findByTournamentOrderByMatchDateAsc(saved);
+            for (Match oldMatch : previousMatches) {
+                if ("FINISHED".equals(oldMatch.getStatus())
+                        && oldMatch.getHomeScore() != null && oldMatch.getAwayScore() != null) {
+                    revertUserStatsForMatch(oldMatch, oldMatch.getHomeScore(), oldMatch.getAwayScore());
+                }
+            }
+
+            // 2) Reiniciar standings existentes a cero para recalcular con los nuevos resultados
+            resetStandingsForTournament(saved);
+
+            // 3) Eliminar partidos previos y recrearlos
             matchRepository.deleteByTournament(saved);
+
+            List<Match> newMatches = new java.util.ArrayList<>();
 
             for (Map.Entry<String, MatchSimpleDto> entry : dto.getMatches().entrySet()) {
                 String nodeId = entry.getKey();
@@ -528,39 +545,45 @@ public class TournamentService {
                     match.setAwayTeam(awayTeam);
                     match.setNodeId(nodeId);
 
-                    // Establecer fechas
                     if (ms.getDate() != null) {
                         match.setMatchDate(LocalDate.parse(ms.getDate()).atStartOfDay());
                     }
 
-                    // Establecer resultados si existen
+                    Integer homeScore = null;
+                    Integer awayScore = null;
+
                     if (ms.getScore1() != null && !ms.getScore1().isEmpty()) {
                         try {
-                            match.setHomeScore(Integer.parseInt(ms.getScore1()));
-                            match.setStatus("FINISHED");
-                        } catch (NumberFormatException e) {
-                            match.setHomeScore(0);
+                            homeScore = Integer.parseInt(ms.getScore1());
+                        } catch (NumberFormatException ignored) {
+                            homeScore = 0;
                         }
-                    } else {
-                        match.setHomeScore(0);
-                        match.setStatus("PENDING");
                     }
 
                     if (ms.getScore2() != null && !ms.getScore2().isEmpty()) {
                         try {
-                            match.setAwayScore(Integer.parseInt(ms.getScore2()));
-                            match.setStatus("FINISHED");
-                        } catch (NumberFormatException e) {
-                            match.setAwayScore(0);
-                        }
-                    } else {
-                        match.setAwayScore(0);
-                        if (match.getStatus() == null) {
-                            match.setStatus("PENDING");
+                            awayScore = Integer.parseInt(ms.getScore2());
+                        } catch (NumberFormatException ignored) {
+                            awayScore = 0;
                         }
                     }
 
-                    matchRepository.save(match);
+                    match.setHomeScore(homeScore != null ? homeScore : 0);
+                    match.setAwayScore(awayScore != null ? awayScore : 0);
+
+                    boolean hasScores = homeScore != null && awayScore != null;
+                    match.setStatus(hasScores ? "FINISHED" : "PENDING");
+
+                    Match savedMatch = matchRepository.save(match);
+                    newMatches.add(savedMatch);
+                }
+            }
+
+            // 4) Aplicar estadísticas para nuevos partidos finalizados (incluye victorias de jugadores)
+            for (Match match : newMatches) {
+                if ("FINISHED".equals(match.getStatus())
+                        && match.getHomeScore() != null && match.getAwayScore() != null) {
+                    updateStandingsForMatch(match); // también actualiza victorias/derrotas de usuarios
                 }
             }
         }
@@ -877,6 +900,7 @@ public class TournamentService {
         }
 
         // Revertir estadísticas antiguas y aplicar las nuevas
+        revertUserStatsForMatch(match, oldHomeScore, oldAwayScore);
         revertStandingsForMatch(match, oldHomeScore, oldAwayScore);
         updateStandingsForMatch(match);
 
@@ -929,6 +953,9 @@ public class TournamentService {
         // Guardar
         standingRepository.save(homeStanding);
         standingRepository.save(awayStanding);
+
+        // Actualizar estadísticas de jugadores
+        updateUserStatsForMatch(match);
     }
 
     private void revertStandingsForMatch(Match match, Integer oldHomeScore, Integer oldAwayScore) {
@@ -954,6 +981,82 @@ public class TournamentService {
         standingRepository.save(awayStanding);
     }
 
+    private void updateUserStatsForMatch(Match match) {
+        if (match == null || match.getHomeScore() == null || match.getAwayScore() == null) {
+            return;
+        }
+
+        if (!"FINISHED".equals(match.getStatus())) {
+            return;
+        }
+
+        if (match.getHomeScore().equals(match.getAwayScore())) {
+            return; // Sin empates para estadísticas de jugador
+        }
+
+        boolean homeWins = match.getHomeScore() > match.getAwayScore();
+        Team winner = homeWins ? match.getHomeTeam() : match.getAwayTeam();
+        Team loser = homeWins ? match.getAwayTeam() : match.getHomeTeam();
+
+        applyUserDelta(winner, 1, 0);
+        applyUserDelta(loser, 0, 1);
+    }
+
+    private void revertUserStatsForMatch(Match match, Integer oldHomeScore, Integer oldAwayScore) {
+        if (match == null || oldHomeScore == null || oldAwayScore == null) {
+            return;
+        }
+
+        if (oldHomeScore.equals(oldAwayScore)) {
+            return;
+        }
+
+        boolean homeWins = oldHomeScore > oldAwayScore;
+        Team winner = homeWins ? match.getHomeTeam() : match.getAwayTeam();
+        Team loser = homeWins ? match.getAwayTeam() : match.getHomeTeam();
+
+        applyUserDelta(winner, -1, 0);
+        applyUserDelta(loser, 0, -1);
+    }
+
+    private void applyUserDelta(Team team, int winDelta, int lossDelta) {
+        if (team == null) {
+            return;
+        }
+
+        Set<User> players = new HashSet<>();
+
+        // Asegurar que las relaciones estén cargadas; si vienen perezosas, recargar desde DB
+        Team hydrated = team;
+        try {
+            if ((team.getMembers() == null || team.getMembers().isEmpty()) && team.getId() != null) {
+                hydrated = teamRepository.findById(team.getId()).orElse(team);
+            }
+        } catch (Exception ignored) {
+            // Si falla la recarga, seguimos con el objeto recibido
+        }
+
+        if (hydrated.getOwner() != null) {
+            players.add(hydrated.getOwner());
+        }
+        if (hydrated.getMembers() != null) {
+            players.addAll(hydrated.getMembers());
+        }
+
+        if (players.isEmpty()) {
+            return;
+        }
+
+        for (User user : players) {
+            int currentWins = user.getWins() != null ? user.getWins() : 0;
+            int currentLosses = user.getLosses() != null ? user.getLosses() : 0;
+            user.setWins(currentWins + winDelta);
+            user.setLosses(currentLosses + lossDelta);
+        }
+
+        userRepository.saveAll(players);
+    }
+
     private void revertStandingStats(Standing standing, Match oldMatch, boolean isHomeTeam) {
         int goalsFor = isHomeTeam ? oldMatch.getHomeScore() : oldMatch.getAwayScore();
         int goalsAgainst = isHomeTeam ? oldMatch.getAwayScore() : oldMatch.getHomeScore();
@@ -971,6 +1074,28 @@ public class TournamentService {
         } else {
             standing.setLost(standing.getLost() - 1);
         }
+    }
+
+    // Limpia las estadísticas acumuladas para recalcular standings desde cero
+    private void resetStandingsForTournament(Tournament tournament) {
+        List<Standing> standings = standingRepository
+                .findByTournamentOrderByPointsDescGoalDifferenceDescGoalsForDesc(tournament);
+
+        if (standings.isEmpty()) {
+            return;
+        }
+
+        for (Standing standing : standings) {
+            standing.setPlayed(0);
+            standing.setWon(0);
+            standing.setDrawn(0);
+            standing.setLost(0);
+            standing.setGoalsFor(0);
+            standing.setGoalsAgainst(0);
+            standing.setPoints(0);
+        }
+
+        standingRepository.saveAll(standings);
     }
 
     private MatchDto matchToDto(Match match) {

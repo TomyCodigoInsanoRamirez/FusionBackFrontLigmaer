@@ -74,10 +74,10 @@ export default function JugadoresList() {
     { id: 5, ruta: 'torneosDisponibles', label: 'Torneos', icon: 'bi-trophy-fill' },
   ];
    const encabezados = [
-    { key: "nombre", label: "Nombre" },
-    { key: "email",         label: "Nombre de usuario" },
-    { key: "description",    label: "Victorias" },
-    { key: "description",    label: "Derrotas" },
+    { key: "nombreCompleto", label: "Nombre" },
+    { key: "username",       label: "Usuario" },
+    { key: "victorias",      label: "Victorias" },
+    { key: "derrotas",       label: "Derrotas" },
     { key: "Acciones",       label: "Acciones" }
   ];
 
@@ -106,8 +106,20 @@ export default function JugadoresList() {
 
     getTeamMembers(user.teamId)
       .then((data) => {
-        setTeamMembers(data);
-        console.log("Miembros del equipo:", data);
+        const normalized = (data || []).map((member) => {
+          const nombre = member.nombre || '';
+          const ap = member.apellidoPaterno || '';
+          const am = member.apellidoMaterno || '';
+          const nombreCompleto = `${nombre} ${ap} ${am}`.trim();
+          return {
+            ...member,
+            nombreCompleto: nombreCompleto || member.email || member.username,
+            victorias: member.victorias ?? 0,
+            derrotas: member.derrotas ?? 0,
+          };
+        });
+        setTeamMembers(normalized);
+        console.log("Miembros del equipo:", normalized);
       })
       .catch((err) => console.error("Error obteniendo miembros:", err));
   }, [user]);
