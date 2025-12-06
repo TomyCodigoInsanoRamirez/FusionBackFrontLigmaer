@@ -4,9 +4,24 @@ import Sidebar from "./Sidebar";
 import TablaCard from "./TablaCard";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
-import { getAllTournaments } from "../utils/Service/General";
+import { getAllTournaments, requestJoinTournament, searchUserByEmail } from "../utils/Service/General";
+import { useAuth } from "../context/AuthContext";
 
 export default function TorneosDisponibles({ title, children }) {
+  const { user } = useAuth();
+  const getCorreoFromToken = () => {
+    const token = localStorage.getItem("token");
+    if (!token) return null;
+    try {
+      const payloadBase64 = token.split(".")[1];
+      const payloadJson = atob(payloadBase64);
+      const payload = JSON.parse(payloadJson);
+      return payload.sub || null;
+    } catch (error) {
+      console.error("Token inválido:", error);
+      return null;
+    }
+  };
     const menuItems = [
     { id: 1, ruta: 'user', label: 'Jugadores', icon: 'bi-person-lines-fill' },
     { id: 2, ruta: 'equipos', label: 'Equipos', icon : 'bi-people-fill' },
@@ -23,20 +38,6 @@ export default function TorneosDisponibles({ title, children }) {
     { key: "Acciones",      label: "Acciones" }
   ];
 
-  const datos = [
-    { id: 1,  nombre: "Liga de campeones", organizador: "Juan Spre", equipos: 16, cuposTomados: 10 },
-    { id: 2,  nombre: "Liga de campeones", organizador: "Juan Spre", equipos: 16, cuposTomados: 10 },
-    { id: 3,  nombre: "Liga de campeones", organizador: "Juan Spre", equipos: 16, cuposTomados: 10 },
-    { id: 4,  nombre: "Liga de campeones", organizador: "Juan Spre", equipos: 16, cuposTomados: 10 },
-    { id: 5,  nombre: "Liga de campeones", organizador: "Juan Spre", equipos: 16, cuposTomados: 10 },
-    { id: 6,  nombre: "Liga de campeones", organizador: "Juan Spre", equipos: 16, cuposTomados: 10 },
-    { id: 7,  nombre: "Liga de campeones", organizador: "Juan Spre", equipos: 16, cuposTomados: 10 },
-    { id: 8,  nombre: "Liga de campeones", organizador: "Juan Spre", equipos: 16, cuposTomados: 10 },
-    { id: 9,  nombre: "Liga de campeones", organizador: "Juan Spre", equipos: 16, cuposTomados: 10 },
-    { id: 10,  nombre: "Liga de campeones", organizador: "Juan Spre", equipos: 16, cuposTomados: 10 },
-    { id: 11,  nombre: "Liga de campeones", organizador: "Juan Spre", equipos: 16, cuposTomados: 10 },
-    { id: 12,  nombre: "Liga de campeones", organizador: "Juan Spre", equipos: 16, cuposTomados: 10 },
-  ];
   const acciones = [
     { accion: "Detalles", icon: "bi-eye-fill" },
     { accion: "Participar", icon: "bi-person-fill-add" },	
@@ -46,35 +47,93 @@ export default function TorneosDisponibles({ title, children }) {
 
   const MySwal = withReactContent(Swal);
   const handleUnirse = (torneo) => {
-    MySwal.fire({
-      title: `¿Unirte a "${torneo.nombre}"?`,
-      text: `Organizador: ${torneo.organizador}\nCupos: ${torneo.equipos}`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'Sí, unirme',
-      cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#4A3287',
-      cancelButtonColor: '#dc3545',
-      reverseButtons: true
-    }).then((result) => {
-      if (result.isConfirmed) {
-        // Aquí pones la lógica real de unirse (API call, navegación, etc.)
+    const verificarPropietario = async () => {
+      try {
+        const correo = user?.email || user?.username || getCorreoFromToken();
+        const res = await searchUserByEmail(correo);
+        const payload = res?.data || res; // ApiResponseDto o respuesta directa
+        const isOwner = payload?.isOwner ?? payload?.data?.isOwner;
+        const ownedTeamIdApi = payload?.ownedTeam?.id || payload?.data?.ownedTeam?.id;
+        const ownedTeamId = ownedTeamIdApi || user?.ownedTeam?.id || user?.teamId;
+
+        if (!isOwner || !ownedTeamId) {
+          MySwal.fire({
+            icon: 'warning',
+            title: 'Necesitas un equipo',
+            text: 'Debes ser dueño de un equipo para solicitar unirte a un torneo.',
+            confirmButtonColor: '#4A3287'
+          });
+          return null;
+        }
+        return ownedTeamId;
+      } catch (error) {
+        console.error('Error verificando propietario:', error);
         MySwal.fire({
-          icon: 'success',
-          title: '¡Listo!',
-          text: 'Te uniste al torneo.',
-          confirmButtonText: 'Aceptar',
+          icon: 'error',
+          title: 'No se pudo validar tu equipo',
+          text: 'Intenta de nuevo o verifica tu sesión.',
           confirmButtonColor: '#4A3287'
         });
+        return null;
       }
+    };
+
+    const nombreTorneo = torneo.tournamentName || torneo.name || torneo.nombre || 'este torneo';
+    const organizador = torneo.organizerName || torneo.organizador || torneo.ownerName || 'Organizador';
+    const cupos = torneo.numTeams || torneo.teamCount || torneo.equipos || 'N/D';
+
+    verificarPropietario().then((ownedTeamId) => {
+      if (!ownedTeamId) return;
+
+      MySwal.fire({
+        title: `¿Unirte a "${nombreTorneo}"?`,
+        text: `Organizador: ${organizador}\nCupos: ${cupos}`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, enviar solicitud',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#4A3287',
+        cancelButtonColor: '#dc3545',
+        reverseButtons: true
+      }).then(async (result) => {
+        if (!result.isConfirmed) return;
+
+        try {
+          await requestJoinTournament(torneo.id, ownedTeamId);
+          MySwal.fire({
+            icon: 'success',
+            title: 'Solicitud enviada',
+            text: 'El organizador revisará tu solicitud y asignará tu lugar.',
+            confirmButtonText: 'Aceptar',
+            confirmButtonColor: '#4A3287'
+          });
+        } catch (error) {
+          const message = error.response?.data?.message || error.response?.data || 'No se pudo enviar la solicitud.';
+          MySwal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: message,
+            confirmButtonColor: '#4A3287'
+          });
+        }
+      });
     });
   };
 
   useEffect(() => {
     getAllTournaments()
       .then((data) => { 
-        console.log("Torneos disponibles: "+data);
-        setTournaments(data.data);
+        const list = data.data || [];
+        const normalizados = list.map(t => ({
+          id: t.id,
+          name: t.tournamentName || t.name,
+          organizador: t.organizerName || t.organizador || t.ownerName,
+          teamCount: t.teamCount ?? (t.teams ? t.teams.length : t.numTeams),
+          estado: t.estado,
+          raw: t,
+          tournamentName: t.tournamentName || t.name // compatibilidad con TablaCard
+        }));
+        setTournaments(normalizados);
       })
       .catch((err) => console.log(err));
   }, []);

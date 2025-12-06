@@ -51,11 +51,19 @@ const handleSubmit = async (e) => {
   }
 
   try {
-    const newTeam = await createTeam({
-      name: formData.nombre,
-      description: formData.descripcion,
-      logoUrl: "https://ui-avatars.com/api/?background=random&name=" + encodeURIComponent(formData.nombre)
-    });
+    const payload = new FormData();
+    payload.append('name', formData.nombre.trim());
+    payload.append('description', formData.descripcion || '');
+
+    // Adjuntar archivo si el usuario lo eligió
+    if (formData.logo) {
+      payload.append('image', formData.logo);
+    } else {
+      // Logo generado por defecto si no se sube archivo
+      payload.append('logoUrl', "https://ui-avatars.com/api/?background=random&name=" + encodeURIComponent(formData.nombre));
+    }
+
+    const newTeam = await createTeam(payload);
 
     Swal.fire({
       icon: 'success',

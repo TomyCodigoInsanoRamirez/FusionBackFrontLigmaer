@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-LigamerBackendApplication<sicotof-backend>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "mx.edu.utez.ligamerbackend.LigamerBackendApplication",
+            "projectName": "sicotof-backend",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}

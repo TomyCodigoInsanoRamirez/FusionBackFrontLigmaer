@@ -4,9 +4,7 @@ import mx.edu.utez.ligamerbackend.dtos.ActionDto;
 import mx.edu.utez.ligamerbackend.dtos.TeamDto;
 import mx.edu.utez.ligamerbackend.models.JoinRequest;
 import mx.edu.utez.ligamerbackend.models.Team;
-import mx.edu.utez.ligamerbackend.models.User;
 import mx.edu.utez.ligamerbackend.services.TeamService;
-import mx.edu.utez.ligamerbackend.services.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -24,9 +22,6 @@ public class TeamController {
     private TeamService teamService;
 
     @Autowired
-    private UserService userService;
-
-    @Autowired
     private mx.edu.utez.ligamerbackend.repositories.MatchRepository matchRepository;
 
     @Autowired
@@ -36,7 +31,8 @@ public class TeamController {
     public ResponseEntity<?> createTeam(
             @RequestParam("name") String name,
             @RequestParam("description") String description,
-            @RequestParam(value = "image", required = false) org.springframework.web.multipart.MultipartFile image) {
+            @RequestParam(value = "image", required = false) org.springframework.web.multipart.MultipartFile image,
+            @RequestParam(value = "logoUrl", required = false) String logoUrl) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String email = authentication.getName();
@@ -44,10 +40,13 @@ public class TeamController {
             TeamDto teamDto = new TeamDto();
             teamDto.setName(name);
             teamDto.setDescription(description);
+            if (logoUrl != null && (image == null || image.isEmpty())) {
+                teamDto.setLogoUrl(logoUrl);
+            }
 
             if (image != null && !image.isEmpty()) {
-                String logoUrl = fileStorageService.store(image);
-                teamDto.setLogoUrl(logoUrl);
+                String storedLogoUrl = fileStorageService.store(image);
+                teamDto.setLogoUrl(storedLogoUrl);
             }
 
             Team team = teamService.createTeam(email, teamDto);

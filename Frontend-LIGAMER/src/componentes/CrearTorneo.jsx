@@ -244,6 +244,61 @@ const generateEmptyMatchDates = () => {
     console.log("Yendo a "+user.role+"/")
   };
 
+  const handleVolverEnCurso = async () => {
+    if (estado !== "En curso") {
+      volver();
+      return;
+    }
+
+    const torneoData = {
+      tournamentName,
+      description,
+      numTeams,
+      startDate,
+      endDate,
+      registrationCloseDate,
+      ruleList: [...ruleList],
+      matchDates: { ...matchDates },
+      estado: "En curso",
+      generadoEl: new Date().toISOString(),
+    };
+
+    const confirm = await MySwal.fire({
+      title: '¿Guardar y salir?',
+      text: 'Se guardarán los avances del torneo antes de salir.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, guardar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#4A3287',
+      cancelButtonColor: '#dc3545',
+      reverseButtons: true
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    try {
+      await updateTournament(id, torneoData);
+      MySwal.fire({
+        icon: 'success',
+        title: 'Guardado',
+        text: 'Los avances del torneo fueron guardados.',
+        toast: true,
+        position: 'top-end',
+        timer: 2500,
+        showConfirmButton: false
+      });
+      volver();
+    } catch (error) {
+      MySwal.fire({
+        icon: 'error',
+        title: 'Error al guardar',
+        text: error.response?.data?.message || 'No se pudo guardar antes de salir.',
+        confirmButtonColor: '#4A3287'
+      });
+    }
+  };
+
   const addRule = () => {
     if (rules.trim()) {
       setRuleList(prev => [...prev, rules.trim()]);
@@ -1041,7 +1096,7 @@ const handleNumTeamsChange = (newValue) => {
 
         {estado === "En curso" && (
           <div className="position-absolute start-0 bottom-0 p-3" style={{ zIndex: 5 }}>
-            <Button variant="danger" onClick={volver}>Volver</Button>
+            <Button variant="danger" onClick={handleVolverEnCurso}>Volver</Button>
           </div>
         )}
       </div>

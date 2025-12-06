@@ -101,6 +101,19 @@ export async function getAllTournaments(){ //
 }
 
 //--------------------------------------------
+// Endpoint: /api/tournaments/{tournamentId}/join-requests (solicitar unir equipo)
+//--------------------------------------------
+export async function requestJoinTournament(tournamentId, teamId){
+  try {
+    const response = await api.post(`/api/tournaments/${tournamentId}/join-requests`, { teamId });
+    return response.data;
+  } catch (error) {
+    console.error("Error solicitando unirse al torneo:", error);
+    throw error;
+  }
+}
+
+//--------------------------------------------
 // Endopoint: /api/tournaments/my-tournaments
 //--------------------------------------------
 export async function getAllMyTournaments(){ 
@@ -112,12 +125,52 @@ export async function getAllMyTournaments(){
     throw error;
   }
 }
+
 //--------------------------------------------
-// Endpoint: /api/teams para crear equipos
+// Endpoints: /api/tournaments/{id}/join-requests (organizador)
+//--------------------------------------------
+export async function getTournamentJoinRequests(tournamentId){
+  try {
+    const response = await api.get(`/api/tournaments/${tournamentId}/join-requests`);
+    return response.data;
+  } catch (error) {
+    console.error("Error obteniendo solicitudes del torneo:", error);
+    throw error;
+  }
+}
+
+export async function respondTournamentJoinRequest(tournamentId, requestId, status){
+  try {
+    const response = await api.put(`/api/tournaments/${tournamentId}/join-requests/${requestId}`, { status });
+    return response.data;
+  } catch (error) {
+    console.error("Error respondiendo solicitud del torneo:", error);
+    throw error;
+  }
+}
+//--------------------------------------------
+// Endpoint: /api/teams para crear equipos (usa multipart por archivo opcional)
 //--------------------------------------------
 export async function createTeam(teamData){
+  // Acepta tanto un objeto plano como un FormData. Si es objeto, se transforma a FormData.
+  const payload = teamData instanceof FormData ? teamData : (() => {
+    const fd = new FormData();
+    fd.append('name', teamData.name ?? '');
+    fd.append('description', teamData.description ?? '');
+    if (teamData.image) fd.append('image', teamData.image);
+    // Soporte legacy: si viene "logo" (del input file) también se mapea a image
+    if (!teamData.image && teamData.logo) fd.append('image', teamData.logo);
+    // Logo por defecto cuando no hay archivo
+    if (!teamData.image && !teamData.logo && teamData.logoUrl) {
+      fd.append('logoUrl', teamData.logoUrl);
+    }
+    return fd;
+  })();
+
   try {
-    const response = await api.post("/api/teams", teamData);
+    const response = await api.post("/api/teams", payload, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
     console.log("Equipo creado:", response.data);
     return response.data;
   } catch (error) {

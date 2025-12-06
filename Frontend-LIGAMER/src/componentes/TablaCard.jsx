@@ -247,34 +247,17 @@ export default function TablaCard({ encabezados = [], datos = [], acciones = [],
       }
 
       if (accion === "Participar") {
-        // Validar antes de proceder (similar a unirse a equipo pero para torneos)
-        console.log("Solicitando participar en el torneo:", fila);
-        
-        // Aquí podrías agregar validaciones específicas para torneos
-        // Por ejemplo: verificar si ya está registrado, si tiene equipo, etc.
-        
-        // Por ahora, simular el registro en torneo
-        try {
-          // TODO: Reemplazar con el endpoint real para registrarse en torneo
-          // await registerInTournament(fila.id);
-          
-          MySwal.fire({
-            icon: 'success',
-            title: 'Registro exitoso',
-            text: `Te has registrado correctamente en el torneo "${fila.tournamentName || fila.nombre || ''}". Espera confirmación del organizador.`,
-            confirmButtonText: 'Aceptar',
-            confirmButtonColor: '#4A3287'
-          });
-        } catch (err) {
-          console.error("Error participando en torneo:", err);
-          MySwal.fire({
-            icon: 'warning',
-            title: 'Error en el registro',
-            text: 'No se pudo completar el registro en el torneo. Intenta de nuevo más tarde.',
-            confirmButtonText: 'Aceptar',
-            confirmButtonColor: '#4A3287'
-          });
+        if (typeof onUnirse === 'function') {
+          onUnirse(fila);
+          return;
         }
+        MySwal.fire({
+          icon: 'info',
+          title: 'Acción no disponible',
+          text: 'La acción de participar aún no está configurada en esta tabla.',
+          confirmButtonText: 'Aceptar',
+          confirmButtonColor: '#4A3287'
+        });
         return;
       }
       abrirModal(fila);

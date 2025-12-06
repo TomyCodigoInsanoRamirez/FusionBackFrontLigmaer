@@ -55,12 +55,14 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { requestToTeams, manageJoinRequest } from '../utils/Service/usuario';
+import { getAllMyTournaments, getTournamentJoinRequests, respondTournamentJoinRequest } from '../utils/Service/General';
 import Swal from 'sweetalert2';
 
 export default function Sidebar({ menuItems = [] }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [notificaciones, setNotificaciones] = useState([]);
+  const [notificaciones, setNotificaciones] = useState([]); // solicitudes de equipo
+  const [torneoNotificaciones, setTorneoNotificaciones] = useState([]); // solicitudes a torneos
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -68,6 +70,9 @@ export default function Sidebar({ menuItems = [] }) {
   useEffect(() => {
     if (user?.teamId) {
       loadJoinRequests();
+    }
+    if (user && (user.role === 'ROLE_ORGANIZADOR' || user.role === 'ROLE_ADMINISTRADOR' || user.role === 'manager' || user.role === 'admin')) {
+      loadTournamentRequests();
     }
   }, [user]);
 
@@ -144,6 +149,78 @@ export default function Sidebar({ menuItems = [] }) {
     }
   };
 
+  // Solicitudes de torneos (organizador/admin)
+  const loadTournamentRequests = async () => {
+    try {
+      const myTournamentsResp = await getAllMyTournaments();
+      const myTournaments = myTournamentsResp.data || [];
+      const pending = [];
+
+      for (const t of myTournaments) {
+        try {
+          const resp = await getTournamentJoinRequests(t.id);
+          const list = resp.data || [];
+          list
+            .filter(r => r.status === 'PENDING')
+            .forEach(r => pending.push({ ...r, tournamentId: t.id, tournamentName: t.tournamentName || t.name }));
+        } catch (err) {
+          console.error('No se pudieron obtener solicitudes del torneo', t.id, err);
+        }
+      }
+      setTorneoNotificaciones(pending);
+    } catch (error) {
+      console.error('Error cargando mis torneos o solicitudes:', error);
+    }
+  };
+
+  const handleAceptarTorneo = async (tournamentId, requestId) => {
+    setLoading(true);
+    try {
+      await respondTournamentJoinRequest(tournamentId, requestId, 'ACCEPTED');
+      Swal.fire({
+        icon: 'success',
+        title: 'Solicitud aceptada',
+        text: 'El equipo ha sido añadido al torneo',
+        confirmButtonColor: '#4A3287'
+      });
+      setTorneoNotificaciones(prev => prev.filter(n => n.id !== requestId));
+    } catch (error) {
+      console.error('Error aceptando solicitud torneo:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: error.response?.data || 'No se pudo aceptar la solicitud',
+        confirmButtonColor: '#4A3287'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRechazarTorneo = async (tournamentId, requestId) => {
+    setLoading(true);
+    try {
+      await respondTournamentJoinRequest(tournamentId, requestId, 'REJECTED');
+      Swal.fire({
+        icon: 'info',
+        title: 'Solicitud rechazada',
+        text: 'La solicitud ha sido rechazada',
+        confirmButtonColor: '#4A3287'
+      });
+      setTorneoNotificaciones(prev => prev.filter(n => n.id !== requestId));
+    } catch (error) {
+      console.error('Error rechazando solicitud torneo:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: error.response?.data || 'No se pudo rechazar la solicitud',
+        confirmButtonColor: '#4A3287'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLogout = () => {
     Swal.fire({
       icon: 'info',
@@ -159,7 +236,7 @@ export default function Sidebar({ menuItems = [] }) {
     });
   };
 
-  const unreadCount = notificaciones.length;
+  const unreadCount = notificaciones.length + torneoNotificaciones.length;
 
   return (
     <>
@@ -241,45 +318,92 @@ export default function Sidebar({ menuItems = [] }) {
                 ></button>
               </div>
               <div className="modal-body">
-                {notificaciones.length === 0 ? (
+                {unreadCount === 0 && (
                   <p className="text-center text-muted">No tienes solicitudes pendientes</p>
-                ) : (
-                  notificaciones.map(notif => (
-                    <div key={notif.id} className="card mb-3">
-                      <div className="card-body d-flex justify-content-between align-items-center">
-                        <div>
-                          <strong>{notif.user?.nombre || notif.user?.email}</strong> quiere unirse a tu equipo
-                          <div className="text-muted small">
-                            Solicitado el: {new Date(notif.createdAt).toLocaleDateString()}
+                )}
+
+                {notificaciones.length > 0 && (
+                  <>
+                    <h6 className="mb-2">Solicitudes a tu equipo</h6>
+                    {notificaciones.map(notif => (
+                      <div key={`team-${notif.id}`} className="card mb-3">
+                        <div className="card-body d-flex justify-content-between align-items-center">
+                          <div>
+                            <strong>{notif.user?.nombre || notif.user?.email}</strong> quiere unirse a tu equipo
+                            <div className="text-muted small">
+                              Solicitado el: {new Date(notif.createdAt).toLocaleDateString()}
+                            </div>
+                          </div>
+                          <div>
+                            <button
+                              className="btn btn-success btn-sm me-2"
+                              title="Aceptar"
+                              onClick={() => handleAceptar(notif.id)}
+                              disabled={loading}
+                            >
+                              {loading ? (
+                                <div className="spinner-border spinner-border-sm" role="status">
+                                  <span className="visually-hidden">Loading...</span>
+                                </div>
+                              ) : (
+                                <i className="bi bi-check-lg"></i>
+                              )}
+                            </button>
+                            <button
+                              className="btn btn-danger btn-sm"
+                              title="Rechazar"
+                              onClick={() => handleRechazar(notif.id)}
+                              disabled={loading}
+                            >
+                              <i className="bi bi-x-lg"></i>
+                            </button>
                           </div>
                         </div>
-                        <div>
-                          <button
-                            className="btn btn-success btn-sm me-2"
-                            title="Aceptar"
-                            onClick={() => handleAceptar(notif.id)}
-                            disabled={loading}
-                          >
-                            {loading ? (
-                              <div className="spinner-border spinner-border-sm" role="status">
-                                <span className="visually-hidden">Loading...</span>
-                              </div>
-                            ) : (
-                              <i className="bi bi-check-lg"></i>
-                            )}
-                          </button>
-                          <button
-                            className="btn btn-danger btn-sm"
-                            title="Rechazar"
-                            onClick={() => handleRechazar(notif.id)}
-                            disabled={loading}
-                          >
-                            <i className="bi bi-x-lg"></i>
-                          </button>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                {torneoNotificaciones.length > 0 && (
+                  <>
+                    <h6 className="mb-2">Solicitudes a tus torneos</h6>
+                    {torneoNotificaciones.map(notif => (
+                      <div key={`tournament-${notif.id}`} className="card mb-3">
+                        <div className="card-body d-flex justify-content-between align-items-center">
+                          <div>
+                            <strong>{notif.team?.name || notif.user?.email || 'Equipo'}</strong> solicita unirse a <strong>{notif.tournamentName || 'tu torneo'}</strong>
+                            <div className="text-muted small">
+                              Solicitado el: {notif.createdAt ? new Date(notif.createdAt).toLocaleDateString() : ''}
+                            </div>
+                          </div>
+                          <div>
+                            <button
+                              className="btn btn-success btn-sm me-2"
+                              title="Aceptar"
+                              onClick={() => handleAceptarTorneo(notif.tournamentId, notif.id)}
+                              disabled={loading}
+                            >
+                              {loading ? (
+                                <div className="spinner-border spinner-border-sm" role="status">
+                                  <span className="visually-hidden">Loading...</span>
+                                </div>
+                              ) : (
+                                <i className="bi bi-check-lg"></i>
+                              )}
+                            </button>
+                            <button
+                              className="btn btn-danger btn-sm"
+                              title="Rechazar"
+                              onClick={() => handleRechazarTorneo(notif.tournamentId, notif.id)}
+                              disabled={loading}
+                            >
+                              <i className="bi bi-x-lg"></i>
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))
+                    ))}
+                  </>
                 )}
               </div>
               <div className="modal-footer">
