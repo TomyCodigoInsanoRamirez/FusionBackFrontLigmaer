@@ -4,11 +4,12 @@ import Sidebar from "./Sidebar";
 import TablaCard from "./TablaCard";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
-import { getAllTournaments, requestJoinTournament, searchUserByEmail } from "../utils/Service/General";
+import { getAllTournaments, requestJoinTournament, searchUserByEmail, getProfile } from "../utils/Service/General";
 import { useAuth } from "../context/AuthContext";
 
 export default function TorneosDisponibles({ title, children }) {
   const { user } = useAuth();
+  const [ownerCache, setOwnerCache] = useState(null); // cache local de owner para sesión actual
   const getCorreoFromToken = () => {
     const token = localStorage.getItem("token");
     if (!token) return null;
@@ -49,6 +50,19 @@ export default function TorneosDisponibles({ title, children }) {
   const handleUnirse = (torneo) => {
     const verificarPropietario = async () => {
       try {
+        // Intento 1: perfil fresco (para capturar equipo recién creado)
+        try {
+          const profile = await getProfile();
+          const ownedTeamFromProfile = profile?.ownedTeam?.id || profile?.teamId;
+          if (profile?.isOwner && ownedTeamFromProfile) {
+            setOwnerCache({ isOwner: true, ownedTeamId: ownedTeamFromProfile });
+            return ownedTeamFromProfile;
+          }
+        } catch (e) {
+          console.error('getProfile falló', e);
+        }
+
+        // Intento 2: SIEMPRE reconsultar por correo para evitar cache viejo
         const correo = user?.email || user?.username || getCorreoFromToken();
         const res = await searchUserByEmail(correo);
         const payload = res?.data || res; // ApiResponseDto o respuesta directa
@@ -66,6 +80,7 @@ export default function TorneosDisponibles({ title, children }) {
           });
           return null;
         }
+        setOwnerCache({ isOwner: true, ownedTeamId });
         return ownedTeamId;
       } catch (error) {
         console.error('Error verificando propietario:', error);

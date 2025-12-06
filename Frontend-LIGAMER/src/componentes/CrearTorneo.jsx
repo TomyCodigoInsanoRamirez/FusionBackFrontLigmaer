@@ -6,9 +6,11 @@ import { Modal, Button, Form, InputGroup, ListGroup, Spinner, Alert } from 'reac
 import { useAuth } from '../context/AuthContext';
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
+import axios from 'axios';
 import {getTournamentById} from './../utils/Service/manager';
 import {saveTournament} from './../utils/Service/manager';
 import {updateTournament} from './../utils/Service/manager';
+import getBaseUrl from '../utils/Service/BaseUrl';
 
 
 const MySwal = withReactContent(Swal);
@@ -58,6 +60,39 @@ export default function CrearTorneo({ estado = "Nuevo" }) {
   const mappedDatesRef = useRef(false);
   const [data, setData] = useState({});
   const [pendingTeams, setPendingTeams] = useState([]); // equipos que llegan del backend
+  const imageCacheRef = useRef(new Map()); // cachea blobs para evitar múltiples descargas
+
+  const resolveImageUrl = (img) => {
+    if (!img) return '';
+    if (img.startsWith('blob:')) return img;
+    if (img.startsWith('http://') || img.startsWith('https://')) return img;
+    const base = getBaseUrl();
+    return `${base}${img.startsWith('/') ? '' : '/'}${img}`;
+  };
+
+  const resolveImageWithAuth = async (img) => {
+    if (!img) return '';
+    if (img.startsWith('blob:')) return img;
+    if (img.startsWith('http://') || img.startsWith('https://')) return img;
+
+    const cached = imageCacheRef.current.get(img);
+    if (cached) return cached;
+
+    const token = localStorage.getItem('token');
+    try {
+      const url = resolveImageUrl(img);
+      const resp = await axios.get(url, {
+        responseType: 'blob',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const objectUrl = URL.createObjectURL(resp.data);
+      imageCacheRef.current.set(img, objectUrl);
+      return objectUrl;
+    } catch (err) {
+      console.error('No se pudo cargar la imagen', img, err);
+      return resolveImageUrl(img); // último intento sin blob
+    }
+  };
 
   // Genera un objeto matchDates con TODAS las claves posibles y valor vacío
 const generateEmptyMatchDates = () => {
@@ -385,17 +420,23 @@ const generateEmptyMatchDates = () => {
   // ==================== ASIGNAR EQUIPOS EN "EN CURSO" ====================
   useEffect(() => {
     if (estado === "En curso" && nodes.length > 0 && pendingTeams.length > 0) {
-      const leaves = nodes
-        .filter(d => !graph.parentToChildren[d.id])
-        .sort((a, b) => a.y - b.y || a.x - b.x);
+      let cancelled = false;
+      const loadTeams = async () => {
+        const leaves = nodes
+          .filter(d => !graph.parentToChildren[d.id])
+          .sort((a, b) => a.y - b.y || a.x - b.x);
 
-      const newTeamData = {};
-      pendingTeams.forEach((eq, i) => {
-        if (i < leaves.length) {
-          newTeamData[leaves[i].id] = { name: eq.name, image: eq.image };
+        const newTeamData = {};
+        for (let i = 0; i < pendingTeams.length && i < leaves.length; i++) {
+          const eq = pendingTeams[i];
+          const imgUrl = await resolveImageWithAuth(eq.image);
+          newTeamData[leaves[i].id] = { name: eq.name, image: imgUrl };
         }
-      });
-      setTeamData(newTeamData);
+        if (!cancelled) setTeamData(newTeamData);
+      };
+
+      loadTeams();
+      return () => { cancelled = true; };
     }
   }, [nodes, estado, graph, pendingTeams]);
 
@@ -858,13 +899,14 @@ useEffect(() => {
     nodes.forEach(d => {
       const team = teamData[d.id];
       if (team?.image) {
+        const imgUrl = team.image.startsWith('blob:') ? team.image : resolveImageUrl(team.image);
         const pattern = defs.append('pattern')
           .attr('id', `pattern-${d.id}`)
           .attr('width', 1)
           .attr('height', 1)
           .attr('patternContentUnits', 'objectBoundingBox');
         pattern.append('image')
-          .attr('href', team.image)
+          .attr('href', imgUrl)
           .attr('width', 1)
           .attr('height', 1)
           .attr('preserveAspectRatio', 'xMidYMid slice');
