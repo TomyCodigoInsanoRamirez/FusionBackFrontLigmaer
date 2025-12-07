@@ -38,6 +38,17 @@ export async function getProfile() {
     throw error;
   }
 }
+
+// Actualizar perfil de usuario
+export async function updateProfile(data) {
+  try {
+    const response = await api.put("/api/profile", data);
+    return response.data;
+  } catch (error) {
+    console.error("Error actualizando el perfil:", error);
+    throw error;
+  }
+}
 //--------------------------------------------
 //Endpoitn: /api/auth/register
 //--------------------------------------------

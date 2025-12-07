@@ -5,7 +5,7 @@ import withReactContent from "sweetalert2-react-content";
 import './Perfil.css';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { changePassword, searchUserByEmail } from '../utils/Service/General';
+import { changePassword, searchUserByEmail, updateProfile } from '../utils/Service/General';
 
 const MySwal = withReactContent(Swal);
 
@@ -20,15 +20,24 @@ export default function PerfilUsuario() {
   const [editingPersonal, setEditingPersonal] = useState(false);
   const [personalData, setPersonalData] = useState({
     nombre: '',
+    apellidoPaterno: '',
+    apellidoMaterno: '',
     email: '',
     username: '',
   });
   const [personalValidation, setPersonalValidation] = useState({
+    nombreValid: true,
+    nombreMessage: '',
+    apellidoPaternoValid: true,
+    apellidoPaternoMessage: '',
+    apellidoMaternoValid: true,
+    apellidoMaternoMessage: '',
     emailValid: true,
     emailMessage: '',
     usernameValid: true,
     usernameMessage: ''
   });
+  const [personalError, setPersonalError] = useState('');
 
   // Estados para edición de contraseña
   const [editingPassword, setEditingPassword] = useState(false);
@@ -72,6 +81,29 @@ export default function PerfilUsuario() {
     }
   };
 
+  const validateApellido = (valor, key) => {
+    let isValid = true;
+    let message = '';
+
+    if (!valor.trim()) {
+      isValid = false;
+      message = 'El apellido es obligatorio';
+    } else if (valor.trim().length < 2) {
+      isValid = false;
+      message = 'Mínimo 2 caracteres';
+    } else {
+      message = 'Apellido válido';
+    }
+
+    setPersonalValidation(prev => ({
+      ...prev,
+      [`${key}Valid`]: isValid,
+      [`${key}Message`]: message,
+    }));
+
+    return isValid;
+  };
+
   // Cargar información del usuario al montar el componente
   useEffect(() => {
     const email = getCorreoFromToken();
@@ -82,6 +114,8 @@ export default function PerfilUsuario() {
           setInformacionUsuario(data);
           setPersonalData({
             nombre: data.nombre || '',
+            apellidoPaterno: data.apellidoPaterno || '',
+            apellidoMaterno: data.apellidoMaterno || '',
             email: data.email || '',
             username: data.username || '',
           });
@@ -132,6 +166,26 @@ export default function PerfilUsuario() {
       ...prev,
       emailValid: isValid,
       emailMessage: message
+    }));
+
+    return isValid;
+  };
+
+  const validateNombre = (nombre) => {
+    let isValid = true;
+    let message = '';
+
+    if (!nombre.trim()) {
+      isValid = false;
+      message = 'El nombre completo es obligatorio';
+    } else {
+      message = 'Nombre válido';
+    }
+
+    setPersonalValidation(prev => ({
+      ...prev,
+      nombreValid: isValid,
+      nombreMessage: message
     }));
 
     return isValid;
@@ -257,16 +311,31 @@ export default function PerfilUsuario() {
 
   // Guardar datos personales
   const handleSavePersonal = async () => {
+    setPersonalError('');
     // Validar todos los campos
+    const nombreValid = validateNombre(personalData.nombre);
     const emailValid = validateEmail(personalData.email);
     const usernameValid = validateUsername(personalData.username);
+    const apPatValid = validateApellido(personalData.apellidoPaterno, 'apellidoPaterno');
+    const apMatValid = validateApellido(personalData.apellidoMaterno, 'apellidoMaterno');
 
     // Si algún campo no es válido, mostrar error
-    if (!emailValid || !usernameValid) {
+    if (!emailValid || !usernameValid || !apPatValid || !apMatValid) {
+      setPersonalError('Por favor, corrige los errores en el formulario antes de continuar.');
       return MySwal.fire({
         icon: 'error',
         title: 'Datos inválidos',
         text: 'Por favor, corrige los errores en el formulario antes de continuar.',
+        confirmButtonColor: '#4A3287'
+      });
+    }
+
+    if (!nombreValid || !personalData.email.trim() || !personalData.username.trim() || !apPatValid || !apMatValid) {
+      setPersonalError('Por favor, completa todos los campos obligatorios.');
+      return MySwal.fire({
+        icon: 'error',
+        title: 'Campos obligatorios',
+        text: 'Por favor, completa todos los campos obligatorios.',
         confirmButtonColor: '#4A3287'
       });
     }
@@ -285,15 +354,21 @@ export default function PerfilUsuario() {
 
     if (result.isConfirmed) {
       try {
-        // AQUÍ DEBES LLAMAR A TU ENDPOINT DE ACTUALIZAR DATOS
-        // Ejemplo: await updateUserProfile(personalData);
-        // Por ahora solo actualizo el estado local
-        
+        const payload = {
+          nombre: personalData.nombre.trim(),
+          apellidoPaterno: personalData.apellidoPaterno.trim(),
+          apellidoMaterno: personalData.apellidoMaterno.trim(),
+          username: personalData.username.trim(),
+          email: personalData.email.trim(),
+        };
+
+        await updateProfile(payload);
+
         setInformacionUsuario({
           ...informacionUsuario,
-          ...personalData
+          ...payload
         });
-        
+
         setEditingPersonal(false);
         MySwal.fire({
           icon: 'success',
@@ -308,6 +383,7 @@ export default function PerfilUsuario() {
           text: error?.response?.data?.message || "Ocurrió un error",
           confirmButtonColor: "#4A3287",
         });
+        setPersonalError(error?.response?.data?.message || 'No se pudieron actualizar los datos.');
       }
     }
   };
@@ -532,7 +608,58 @@ export default function PerfilUsuario() {
         <Modal.Body>
           <Form>
             <Form.Group className="mb-3">
-              <Form.Label>Correo:</Form.Label>
+              <Form.Label>Nombre completo <span style={{ color: 'red' }}>*</span></Form.Label>
+              <Form.Control
+                value={personalData.nombre}
+                onChange={(e) => {
+                  const newNombre = e.target.value;
+                  setPersonalData({ ...personalData, nombre: newNombre });
+                  validateNombre(newNombre);
+                }}
+                placeholder="Tu nombre completo"
+                isInvalid={!personalValidation.nombreValid}
+                isValid={personalValidation.nombreValid && personalData.nombre.trim() !== ''}
+              />
+              <Form.Control.Feedback type={personalValidation.nombreValid ? 'valid' : 'invalid'}>
+                {personalValidation.nombreMessage}
+              </Form.Control.Feedback>
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Apellido paterno <span style={{ color: 'red' }}>*</span></Form.Label>
+              <Form.Control
+                value={personalData.apellidoPaterno}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setPersonalData({ ...personalData, apellidoPaterno: value });
+                  validateApellido(value, 'apellidoPaterno');
+                }}
+                placeholder="Tu apellido paterno"
+                isInvalid={!personalValidation.apellidoPaternoValid}
+                isValid={personalValidation.apellidoPaternoValid && personalData.apellidoPaterno.trim() !== ''}
+              />
+              <Form.Control.Feedback type={personalValidation.apellidoPaternoValid ? 'valid' : 'invalid'}>
+                {personalValidation.apellidoPaternoMessage}
+              </Form.Control.Feedback>
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Apellido materno <span style={{ color: 'red' }}>*</span></Form.Label>
+              <Form.Control
+                value={personalData.apellidoMaterno}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setPersonalData({ ...personalData, apellidoMaterno: value });
+                  validateApellido(value, 'apellidoMaterno');
+                }}
+                placeholder="Tu apellido materno"
+                isInvalid={!personalValidation.apellidoMaternoValid}
+                isValid={personalValidation.apellidoMaternoValid && personalData.apellidoMaterno.trim() !== ''}
+              />
+              <Form.Control.Feedback type={personalValidation.apellidoMaternoValid ? 'valid' : 'invalid'}>
+                {personalValidation.apellidoMaternoMessage}
+              </Form.Control.Feedback>
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Correo <span style={{ color: 'red' }}>*</span></Form.Label>
               <Form.Control
                 type="email"
                 value={personalData.email}
@@ -550,7 +677,7 @@ export default function PerfilUsuario() {
               </Form.Control.Feedback>
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>Nombre de usuario:</Form.Label>
+              <Form.Label>Nombre de usuario <span style={{ color: 'red' }}>*</span></Form.Label>
               <Form.Control
                 value={personalData.username}
                 onChange={(e) => {
@@ -566,6 +693,9 @@ export default function PerfilUsuario() {
                 {personalValidation.usernameMessage}
               </Form.Control.Feedback>
             </Form.Group>
+            {personalError && (
+              <div className="text-danger small mb-2">{personalError}</div>
+            )}
           </Form>
         </Modal.Body>
         <Modal.Footer>
