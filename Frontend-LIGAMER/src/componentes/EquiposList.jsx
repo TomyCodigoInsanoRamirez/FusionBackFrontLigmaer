@@ -6,7 +6,7 @@ import { getAllTeams } from "../utils/Service/usuario";
 import { useState, useEffect } from "react";
 import { Modal, Button, Form } from "react-bootstrap";
 import Swal from "sweetalert2";
-import { createTeam } from "../utils/Service/General";
+import { createTeam, getProfile } from "../utils/Service/General";
 import { text } from "d3";
 
 export default function EquiposList() {
@@ -51,6 +51,17 @@ const handleSubmit = async (e) => {
   }
 
   try {
+    const profile = await getProfile();
+    if (profile?.ownedTeam) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Ya administras un equipo',
+        text: 'No puedes crear más de un equipo como dueño.',
+        confirmButtonColor: '#4A3287'
+      });
+      return;
+    }
+
     const payload = new FormData();
     payload.append('name', formData.nombre.trim());
     payload.append('description', formData.descripcion || '');
@@ -68,8 +79,9 @@ const handleSubmit = async (e) => {
     Swal.fire({
       icon: 'success',
       title: 'Equipo creado',
-      text: `El equipo "${newTeam.name}" ha sido creado exitosamente`,
-      confirmButtonColor: '#4A3287'
+      text: 'Equipo creado, solo puedes crear un equipo.',
+      confirmButtonColor: '#4A3287',
+      position: 'top'
     });
 
     handleCloseModal();

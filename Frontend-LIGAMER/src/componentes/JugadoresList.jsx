@@ -4,6 +4,7 @@ import Sidebar from "./Sidebar";
 import TablaCard from "./TablaCard";
 import { useState, useEffect } from "react";
 import { getTeamMembers, leaveTeam } from "../utils/Service/usuario";
+import { getProfile } from "../utils/Service/General";
 import { useAuth } from "../context/AuthContext";
 import Swal from "sweetalert2";
 
@@ -22,29 +23,52 @@ export default function JugadoresList() {
       return;
     }
 
+    let teamName = 'tu equipo';
+
+    try {
+      const profile = await getProfile();
+      teamName = profile?.team?.name || profile?.team?.nombre || teamName;
+
+      const tournaments = profile?.team?.tournaments || profile?.team?.torneos;
+      const hasOngoingTournament = Array.isArray(tournaments)
+        ? tournaments.some((t) => (t?.estado || t?.status) === 'En curso')
+        : (profile?.team?.estadoTorneo || profile?.team?.tournamentStatus) === 'En curso';
+
+      if (hasOngoingTournament) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'No puedes abandonar el equipo',
+          text: 'No puedes abandonar el equipo mientras participas en un torneo',
+          confirmButtonColor: '#4A3287'
+        });
+        return;
+      }
+    } catch (err) {
+      console.log('No se pudo obtener detalle del equipo antes de salir:', err);
+    }
+
     // Confirmar antes de salir
     const result = await Swal.fire({
-      title: '¿Estás seguro?',
-      text: 'Una vez que salgas del equipo, tendrás que solicitar unirte nuevamente si quieres volver',
+      title: `¿Desea abandonar al equipo "${teamName}"?`,
+      text: 'Se le notificará al capitán',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#d33',
       cancelButtonColor: '#4A3287',
-      confirmButtonText: 'Salir del equipo',
+      confirmButtonText: 'Abandonar',
       cancelButtonText: 'Cancelar'
     });
 
     if (result.isConfirmed) {
       try {
         await leaveTeam(user.teamId);
-        
+
         Swal.fire({
           icon: 'success',
           title: 'Has salido del equipo',
-          text: 'Has salido exitosamente del equipo',
+          text: 'Se notificó al capitán.',
           confirmButtonColor: '#4A3287'
         }).then(() => {
-          // Recargar la página o redirigir
           window.location.reload();
         });
 
@@ -55,6 +79,17 @@ export default function JugadoresList() {
         const errorMessage = typeof error.response?.data === 'string' 
           ? error.response.data 
           : error.response?.data?.message || "Error al salir del equipo";
+
+        const lowerMsg = (errorMessage || '').toLowerCase();
+        if (lowerMsg.includes('torneo') && lowerMsg.includes('curso')) {
+          Swal.fire({
+            icon: 'warning',
+            title: 'No puedes abandonar el equipo',
+            text: 'No puedes abandonar el equipo mientras participas en un torneo',
+            confirmButtonColor: '#4A3287'
+          });
+          return;
+        }
 
         Swal.fire({
           icon: "error",

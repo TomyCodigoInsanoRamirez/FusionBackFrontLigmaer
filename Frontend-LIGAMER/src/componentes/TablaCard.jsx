@@ -89,13 +89,13 @@ export default function TablaCard({ encabezados = [], datos = [], acciones = [],
       const userProfile = profile.data;
       
       if (userProfile.team || userProfile.ownedTeam) {
-        MySwal.fire({
-          icon: 'warning',
-          title: 'Ya perteneces a un equipo',
-          text: 'Abandona tu equipo actual para unirte a otro',
-          confirmButtonColor: '#4A3287'
-        });
-        return false;
+          MySwal.fire({
+            icon: 'warning',
+            title: 'Abandona tu equipo actual',
+            text: 'Abandona tu equipo actual para unirte a otro',
+            confirmButtonColor: '#4A3287'
+          });
+          return false;
       }
 
       // 2. Verificar si ya envió solicitud a este equipo
@@ -238,12 +238,12 @@ export default function TablaCard({ encabezados = [], datos = [], acciones = [],
               // Mostrar mensaje de error si la petición falla
               const errorMessage = 'Ya has solicitado unirte a este equipo, espera respuesta del administrador';
               MySwal.fire({
-                icon: 'warning',
-                title: 'Solicitud duplicada',
-                text: errorMessage,
-                confirmButtonText: 'Aceptar',
-                confirmButtonColor: '#4A3287'
-              });
+                  icon: 'warning',
+                  title: 'Solicitud duplicada',
+                  text: errorMessage,
+                  confirmButtonText: 'Aceptar',
+                  confirmButtonColor: '#4A3287'
+                });
             });
         });
         return;

@@ -15,7 +15,7 @@ import getBaseUrl from '../utils/Service/BaseUrl';
 
 const MySwal = withReactContent(Swal);
 
-export default function CrearTorneo({ estado = "Nuevo" }) {
+export default function CrearTorneo({ estado = "Nuevo", datosGuardados = null, equipos = [] }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -90,8 +90,8 @@ export default function CrearTorneo({ estado = "Nuevo" }) {
       imageCacheRef.current.set(img, objectUrl);
       return objectUrl;
     } catch (err) {
-      console.error('No se pudo cargar la imagen', img, err);
-      return resolveImageUrl(img); // último intento sin blob
+      // Intenta devolver la URL absoluta para al menos mostrar algo
+      return resolveImageUrl(img);
     }
   };
 
@@ -273,6 +273,34 @@ const generateEmptyMatchDates = () => {
     fetchTorneo();
   }, [id, estado]);
 
+  // Carga desde props cuando no hay id (uso manual con datosGuardados/equipos)
+  useEffect(() => {
+    if (id || !datosGuardados) return;
+
+    setTournamentName(datosGuardados.tournamentName || "");
+    setDescription(datosGuardados.description || "");
+    setNumTeams(datosGuardados.numTeams || 8);
+    setStartDate(datosGuardados.startDate || "");
+    setEndDate(datosGuardados.endDate || "");
+    setRegistrationCloseDate(datosGuardados.registrationCloseDate || "");
+    setRuleList(datosGuardados.ruleList || []);
+    setMatchDates(datosGuardados.matchDates || {});
+    setMatches(datosGuardados.matches || {});
+
+    const mappedEquipos = (equipos && equipos.length > 0 ? equipos : datosGuardados.teams || []).map((t) => ({
+      id: t.id,
+      name: t.name || t.nombre,
+      image: t.image || t.imagen,
+    })).filter((t) => t.name);
+
+    if (mappedEquipos.length > 0) {
+      setPendingTeams(mappedEquipos);
+    }
+
+    hasGenerated.current = true;
+    setGenerateTrigger((prev) => prev + 1);
+  }, [id, datosGuardados, equipos]);
+
   useEffect(() => {
     console.log("Respuesta real backend DATA TORNEO", data);
   }, [data]);
@@ -433,9 +461,9 @@ const generateEmptyMatchDates = () => {
     setConnections(newConnections);
   }, [generateTrigger, numTeams]);
 
-  // ==================== ASIGNAR EQUIPOS EN "EN CURSO" ====================
+  // ==================== ASIGNAR EQUIPOS EN "En curso" / "Finalizado" ====================
   useEffect(() => {
-    if (estado !== "En curso" || nodes.length === 0) return;
+    if (!["En curso", "Finalizado"].includes(estado) || nodes.length === 0) return;
 
     let cancelled = false;
 
@@ -517,10 +545,10 @@ const generateEmptyMatchDates = () => {
     };
   }, [estado, nodes, graph, pendingTeams, matches, teamData]);
 
-  // ==================== AVANCE AUTOMÁTICO DE GANADORES AL CARGAR "En curso" ====================
+  // ==================== AVANCE AUTOMÁTICO DE GANADORES AL CARGAR "En curso" / "Finalizado" ====================
 useEffect(() => {
-  // Solo ejecutamos en modo "En curso" y cuando ya tenemos todo cargado
-  if (estado !== "En curso" || nodes.length === 0 || Object.keys(matches).length === 0) return;
+  // Solo ejecutamos en modo "En curso" o "Finalizado" y cuando ya tenemos todo cargado
+  if (!["En curso", "Finalizado"].includes(estado) || nodes.length === 0 || Object.keys(matches).length === 0) return;
 
   let hasAdvanced = false;
 
@@ -1220,7 +1248,7 @@ const handleNumTeamsChange = (newValue) => {
 
   return (
     <div className="d-flex flex-column flex-md-row vh-100 crear-torneo">
-      {estado !== "En curso" && !isMobile && (
+      {estado !== "En curso" && estado !== "Finalizado" && !isMobile && (
         <div className="col-md-3 p-3 overflow-auto" style={{ color: '#00A6A6' }}>
           {configForm}
         </div>
@@ -1245,7 +1273,7 @@ const handleNumTeamsChange = (newValue) => {
           {teamData[hoveredNode]?.name || 'por definir'}
         </div>
 
-        {estado !== "En curso" && isMobile && (
+        {estado !== "En curso" && estado !== "Finalizado" && isMobile && (
           <Button variant="primary" size="lg" className="position-absolute" style={{ bottom: '20px', right: '20px', zIndex: 10 }} onClick={() => setShowConfigModal(true)}>
             Configurar
           </Button>
@@ -1264,6 +1292,12 @@ const handleNumTeamsChange = (newValue) => {
                 {finishing ? 'Finalizando...' : 'Terminar torneo'}
               </Button>
             )}
+          </div>
+        )}
+
+        {estado === "Finalizado" && (
+          <div className="position-absolute start-0 bottom-0 p-3" style={{ zIndex: 5 }}>
+            <Button variant="secondary" onClick={volver}>Volver</Button>
           </div>
         )}
       </div>
@@ -1287,6 +1321,7 @@ const handleNumTeamsChange = (newValue) => {
             const siblings = graph.parentToChildren[parentId] || [];
             const rivalId = siblings.find(id => id !== selectedNode);
             const isEnCurso = estado === "En curso";
+            const canEditFecha = estado === "Nuevo" || estado === "Guardado";
 
             return (
               <Form>
@@ -1304,14 +1339,14 @@ const handleNumTeamsChange = (newValue) => {
                 </div>
                 <Form.Group className="mb-3">
                   <Form.Label>Fecha del enfrentamiento:</Form.Label>
-                  <Form.Control type="date" value={dateInput} onChange={e => setDateInput(e.target.value)} readOnly={isEnCurso} />
+                  <Form.Control type="date" value={dateInput} onChange={e => setDateInput(e.target.value)} readOnly={!canEditFecha} />
                 </Form.Group>
               </Form>
             );
           })()}
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="primary" onClick={handleSave} disabled={estado !== "En curso"}>
+          <Button variant="primary" onClick={handleSave} disabled={estado === "Finalizado"}>
             Guardar
           </Button>
           <Button variant="secondary" onClick={handleCloseModal}>Cancelar</Button>
