@@ -19,6 +19,8 @@ public class TournamentCreateDto {
     private List<String> ruleList;
     private Map<String, String> matchDates;
     private String estado;
+    private Long championTeamId;
+    private String championTeamName;
     private List<TeamSimpleDto> teams;
     private Map<String, MatchSimpleDto> matches;
 }

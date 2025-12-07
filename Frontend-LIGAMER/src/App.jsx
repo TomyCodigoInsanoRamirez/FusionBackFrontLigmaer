@@ -9,7 +9,7 @@ import DashboardLayoutUserGraficas from './componentes/DashboardLayoutUserGrafic
 import Forbidden from './pages/Forbidden';
 import HomeRedirect from './pages/HomeRedirect';
 import CrearCuenta from './componentes/CrearCuenta';
-import CrearTorneo from './componentes/crearTorneo';
+import CrearTorneo from './componentes/CrearTorneo';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import TorneoEnCurso from './pages/TorneoEnCurso';

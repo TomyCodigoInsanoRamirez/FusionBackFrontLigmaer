@@ -1,4 +1,4 @@
-import CrearTorneo from '../componentes/crearTorneo';
+import CrearTorneo from '../componentes/CrearTorneo';
 export default function TorneoEnCurso() {
   const equiposInscritos = [
     { id: 1, nombre: "Los RayosInsnos FC", imagen: "https://example.com/rayos.png" },

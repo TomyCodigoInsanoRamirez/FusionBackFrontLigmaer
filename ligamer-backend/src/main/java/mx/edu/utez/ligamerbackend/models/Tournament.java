@@ -72,6 +72,13 @@ public class Tournament {
     )
     private Set<Team> teams = new HashSet<>();
 
+        @ManyToOne
+        @JoinColumn(name = "champion_team_id")
+        private Team championTeam;
+
+        @Column(name = "champion_team_name", length = 150)
+        private String championTeamName;
+
     @PrePersist
     protected void onCreate() {
         // Inicializar timestamps y estado

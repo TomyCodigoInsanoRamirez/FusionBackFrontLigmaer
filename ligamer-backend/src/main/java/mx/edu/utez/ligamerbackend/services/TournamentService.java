@@ -29,6 +29,7 @@ import mx.edu.utez.ligamerbackend.repositories.MatchRepository;
 import mx.edu.utez.ligamerbackend.dtos.PlayerStatDto;
 import mx.edu.utez.ligamerbackend.dtos.TournamentSummaryDto;
 import mx.edu.utez.ligamerbackend.dtos.TournamentFullDto;
+import mx.edu.utez.ligamerbackend.dtos.TournamentUpdateDto;
 import mx.edu.utez.ligamerbackend.dtos.MatchSimpleDto;
 import mx.edu.utez.ligamerbackend.dtos.TeamSimpleDto;
 import java.time.LocalDate;
@@ -97,11 +98,17 @@ public class TournamentService {
         // nuevas)
         if (dto.getTeams() != null) {
             for (TeamSimpleDto ts : dto.getTeams()) {
-                Team team = teamRepository.findByName(ts.getName()).orElseGet(() -> {
-                    Team newTeam = new Team();
-                    newTeam.setName(ts.getName());
-                    return teamRepository.save(newTeam);
-                });
+                Team team = null;
+                if (ts.getId() != null) {
+                    team = teamRepository.findById(ts.getId()).orElse(null);
+                }
+                if (team == null) {
+                    team = teamRepository.findByName(ts.getName()).orElseGet(() -> {
+                        Team newTeam = new Team();
+                        newTeam.setName(ts.getName());
+                        return teamRepository.save(newTeam);
+                    });
+                }
                 t.getTeams().add(team);
             }
         }
@@ -191,6 +198,16 @@ public class TournamentService {
         t.setRegistrationCloseDate(dto.getRegistrationCloseDate());
         t.setMatchDates(dto.getMatchDates());
         t.setEstado(dto.getEstado());
+        if (dto.getChampionTeamId() != null) {
+            Team champion = teamRepository.findById(dto.getChampionTeamId())
+                    .orElseThrow(() -> new RuntimeException("Equipo campeón no encontrado"));
+            t.setChampionTeam(champion);
+            t.setChampionTeamName(champion.getName());
+        } else if (dto.getChampionTeamName() != null) {
+            Team champion = teamRepository.findByName(dto.getChampionTeamName()).orElse(null);
+            t.setChampionTeam(champion);
+            t.setChampionTeamName(dto.getChampionTeamName());
+        }
         t.setCreatedBy(creator);
         t.setActive(true);
 
@@ -198,11 +215,17 @@ public class TournamentService {
         // nuevas)
         if (dto.getTeams() != null) {
             for (TeamSimpleDto ts : dto.getTeams()) {
-                Team team = teamRepository.findByName(ts.getName()).orElseGet(() -> {
-                    Team newTeam = new Team();
-                    newTeam.setName(ts.getName());
-                    return teamRepository.save(newTeam);
-                });
+                Team team = null;
+                if (ts.getId() != null) {
+                    team = teamRepository.findById(ts.getId()).orElse(null);
+                }
+                if (team == null) {
+                    team = teamRepository.findByName(ts.getName()).orElseGet(() -> {
+                        Team newTeam = new Team();
+                        newTeam.setName(ts.getName());
+                        return teamRepository.save(newTeam);
+                    });
+                }
                 t.getTeams().add(team);
             }
         }
@@ -342,6 +365,9 @@ public class TournamentService {
         Tournament found = tournamentRepository.findById(tournamentId)
                 .orElseThrow(() -> new RuntimeException("Torneo no encontrado."));
 
+        String previousEstado = found.getEstado() != null ? found.getEstado() : "";
+        Team championFromDto = resolveChampionTeam(dto);
+
         if (dto.getTournamentName() != null)
             found.setName(dto.getTournamentName());
         if (dto.getDescription() != null)
@@ -360,6 +386,21 @@ public class TournamentService {
             found.setMatchDates(dto.getMatchDates());
         if (dto.getEstado() != null)
             found.setEstado(dto.getEstado());
+
+        if (championFromDto != null || dto.getChampionTeamName() != null) {
+            found.setChampionTeam(championFromDto);
+            found.setChampionTeamName(championFromDto != null ? championFromDto.getName() : dto.getChampionTeamName());
+        }
+
+        if (championFromDto != null || dto.getChampionTeamName() != null) {
+            found.setChampionTeam(championFromDto);
+            found.setChampionTeamName(championFromDto != null ? championFromDto.getName() : dto.getChampionTeamName());
+        }
+
+        if (championFromDto != null || dto.getChampionTeamName() != null) {
+            found.setChampionTeam(championFromDto);
+            found.setChampionTeamName(championFromDto != null ? championFromDto.getName() : dto.getChampionTeamName());
+        }
 
         // Actualizar partidos si vienen
         if (dto.getMatches() != null) {
@@ -472,6 +513,9 @@ public class TournamentService {
         Tournament found = tournamentRepository.findById(tournamentId)
                 .orElseThrow(() -> new RuntimeException("Torneo no encontrado."));
 
+        String previousEstado = found.getEstado() != null ? found.getEstado() : "";
+        Team championFromDto = resolveChampionTeam(dto);
+
         // Actualizar campos básicos
         if (dto.getTournamentName() != null)
             found.setName(dto.getTournamentName());
@@ -494,15 +538,26 @@ public class TournamentService {
         if (dto.getEstado() != null)
             found.setEstado(dto.getEstado());
 
+        if (championFromDto != null || dto.getChampionTeamName() != null) {
+            found.setChampionTeam(championFromDto);
+            found.setChampionTeamName(championFromDto != null ? championFromDto.getName() : dto.getChampionTeamName());
+        }
+
         // Actualizar equipos
         if (dto.getTeams() != null) {
             found.getTeams().clear();
             for (TeamSimpleDto ts : dto.getTeams()) {
-                Team team = teamRepository.findByName(ts.getName()).orElseGet(() -> {
-                    Team newTeam = new Team();
-                    newTeam.setName(ts.getName());
-                    return teamRepository.save(newTeam);
-                });
+                Team team = null;
+                if (ts.getId() != null) {
+                    team = teamRepository.findById(ts.getId()).orElse(null);
+                }
+                if (team == null) {
+                    team = teamRepository.findByName(ts.getName()).orElseGet(() -> {
+                        Team newTeam = new Team();
+                        newTeam.setName(ts.getName());
+                        return teamRepository.save(newTeam);
+                    });
+                }
                 found.getTeams().add(team);
             }
         }
@@ -588,6 +643,24 @@ public class TournamentService {
             }
         }
 
+        boolean finalizedNow = isFinalizado(saved.getEstado()) && !isFinalizado(previousEstado);
+        if (finalizedNow) {
+            if (saved.getChampionTeam() == null && saved.getChampionTeamName() == null) {
+                throw new RuntimeException("Se requiere especificar el equipo campeón para finalizar el torneo.");
+            }
+            if (saved.getChampionTeam() == null && saved.getChampionTeamName() != null) {
+                Team champion = teamRepository.findByName(saved.getChampionTeamName()).orElse(null);
+                saved.setChampionTeam(champion);
+                tournamentRepository.save(saved);
+                championFromDto = champion;
+            }
+            if (championFromDto != null) {
+                Integer current = championFromDto.getTournamentsWon() != null ? championFromDto.getTournamentsWon() : 0;
+                championFromDto.setTournamentsWon(current + 1);
+                teamRepository.save(championFromDto);
+            }
+        }
+
         return toFullDto(saved);
     }
 
@@ -616,11 +689,14 @@ public class TournamentService {
         dto.setEstado(t.getEstado());
         dto.setGeneradoEl(t.getGeneradoEl());
         dto.setActualizadoEl(t.getActualizadoEl());
+        dto.setChampionTeamId(t.getChampionTeam() != null ? t.getChampionTeam().getId() : null);
+        dto.setChampionTeamName(t.getChampionTeamName());
         // Teams
         java.util.List<TeamSimpleDto> teams = new java.util.ArrayList<>();
         if (t.getTeams() != null) {
             for (Team team : t.getTeams()) {
                 TeamSimpleDto ts = new TeamSimpleDto();
+                ts.setId(team.getId());
                 ts.setName(team.getName());
                 ts.setImage(team.getLogoUrl());
                 teams.add(ts);
@@ -654,6 +730,30 @@ public class TournamentService {
         dto.setMatches(matchesMap);
 
         return dto;
+    }
+
+    private Team resolveChampionTeam(TournamentFullDto dto) {
+        if (dto == null)
+            return null;
+        if (dto.getChampionTeamId() != null)
+            return teamRepository.findById(dto.getChampionTeamId()).orElse(null);
+        if (dto.getChampionTeamName() != null)
+            return teamRepository.findByName(dto.getChampionTeamName()).orElse(null);
+        return null;
+    }
+
+    private Team resolveChampionTeam(TournamentUpdateDto dto) {
+        if (dto == null)
+            return null;
+        if (dto.getChampionTeamId() != null)
+            return teamRepository.findById(dto.getChampionTeamId()).orElse(null);
+        if (dto.getChampionTeamName() != null)
+            return teamRepository.findByName(dto.getChampionTeamName()).orElse(null);
+        return null;
+    }
+
+    private boolean isFinalizado(String estado) {
+        return estado != null && "Finalizado".equalsIgnoreCase(estado.trim());
     }
 
     @Transactional(readOnly = true)

@@ -25,6 +25,9 @@ public class Team {
 
     private String logoUrl;
 
+    @Column(name = "tournaments_won", nullable = false, columnDefinition = "INT DEFAULT 0")
+    private Integer tournamentsWon = 0;
+
 
     @OneToOne
     @JoinColumn(name = "owner_id", referencedColumnName = "id")

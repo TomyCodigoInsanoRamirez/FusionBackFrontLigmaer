@@ -23,6 +23,8 @@ public class TournamentFullDto {
     private String estado;
     private LocalDateTime generadoEl;
     private LocalDateTime actualizadoEl;
+    private Long championTeamId;
+    private String championTeamName;
     private List<TeamSimpleDto> teams;
     private Map<String, MatchSimpleDto> matches;
 }

@@ -1,4 +1,4 @@
-import CrearTorneo from '../componentes/crearTorneo';
+import CrearTorneo from '../componentes/CrearTorneo';
 
 export default function VerTorneoGuardado() {
   const datosGuardados = {

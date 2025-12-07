@@ -53,6 +53,7 @@ export default function CrearTorneo({ estado = "Nuevo" }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showRulesModal, setShowRulesModal] = useState(false);
+  const [finishing, setFinishing] = useState(false);
 
   const svgRef = useRef();
   const prevGraphRef = useRef();
@@ -116,7 +117,7 @@ export default function CrearTorneo({ estado = "Nuevo" }) {
     return sortTeamsByName(Array.from(unique.values()));
   };
 
-  const buildTournamentPayload = (matchesPayload = matches, localTeamData = teamData, estadoOverride = estado) => ({
+  const buildTournamentPayload = (matchesPayload = matches, localTeamData = teamData, estadoOverride = estado, championTeamId = null, championTeamName = null) => ({
     tournamentName,
     description,
     numTeams,
@@ -128,6 +129,8 @@ export default function CrearTorneo({ estado = "Nuevo" }) {
     matches: { ...matchesPayload },
     teams: buildTeamsPayload(localTeamData),
     estado: estadoOverride,
+    championTeamId,
+    championTeamName,
     generadoEl: new Date().toISOString(),
   });
 
@@ -882,6 +885,53 @@ useEffect(() => {
     }
   }
 
+  const allMatchesHaveScores = Object.values(matches || {}).length > 0 &&
+    Object.values(matches).every((m) => m && m.score1 !== undefined && m.score1 !== '' && m.score2 !== undefined && m.score2 !== '');
+
+  const winnerNodeId = nodes.find((n) => !graph.childToParent[n.id]);
+  const winnerTeam = winnerNodeId ? teamData[winnerNodeId.id] : null;
+
+  const canFinalize = user?.role === 'ROLE_ORGANIZADOR' || user?.role === 'ROLE_ADMINISTRADOR';
+
+  const handleTerminarTorneo = async () => {
+    if (!canFinalize) return;
+    const confirm = await MySwal.fire({
+      title: 'Terminar torneo',
+      text: 'El estado se marcará como "Finalizado". ¿Deseas continuar?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, finalizar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#4A3287',
+      cancelButtonColor: '#dc3545',
+      reverseButtons: true,
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    try {
+      setFinishing(true);
+      const payload = buildTournamentPayload(matches, teamData, 'Finalizado', winnerTeam?.id || null, winnerTeam?.name || null);
+      await updateTournament(id, payload);
+      await MySwal.fire({
+        icon: 'success',
+        title: 'Torneo finalizado',
+        text: 'Se marcó como Finalizado.',
+        confirmButtonColor: '#4A3287',
+      });
+      volver();
+    } catch (error) {
+      MySwal.fire({
+        icon: 'error',
+        title: 'No se pudo finalizar',
+        text: error.response?.data?.message || 'Intenta nuevamente.',
+        confirmButtonColor: '#4A3287',
+      });
+    } finally {
+      setFinishing(false);
+    }
+  };
+
   const handleCrearTorneo = async () => { //= async () => {
     const torneoData = {
       tournamentName,
@@ -1197,6 +1247,16 @@ const handleNumTeamsChange = (newValue) => {
         {estado === "En curso" && (
           <div className="position-absolute start-0 bottom-0 p-3" style={{ zIndex: 5 }}>
             <Button variant="danger" onClick={handleVolverEnCurso}>Volver</Button>
+            {canFinalize && (
+              <Button
+                className="ms-2"
+                variant="success"
+                onClick={handleTerminarTorneo}
+                disabled={!allMatchesHaveScores || finishing}
+              >
+                {finishing ? 'Finalizando...' : 'Terminar torneo'}
+              </Button>
+            )}
           </div>
         )}
       </div>
