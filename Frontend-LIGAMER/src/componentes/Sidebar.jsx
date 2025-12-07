@@ -55,7 +55,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { requestToTeams, manageJoinRequest } from '../utils/Service/usuario';
-import { getAllMyTournaments, getTournamentJoinRequests, respondTournamentJoinRequest } from '../utils/Service/General';
+import { getAllMyTournaments, getTournamentJoinRequests, respondTournamentJoinRequest, searchUserByEmail } from '../utils/Service/General';
 import Swal from 'sweetalert2';
 
 export default function Sidebar({ menuItems = [] }) {
@@ -65,6 +65,22 @@ export default function Sidebar({ menuItems = [] }) {
   const [torneoNotificaciones, setTorneoNotificaciones] = useState([]); // solicitudes a torneos
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [username, setUsername] = useState('');
+
+  const getCorreoFromToken = () => {
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+
+    try {
+      const payloadBase64 = token.split('.')[1];
+      const payloadJson = atob(payloadBase64);
+      const payload = JSON.parse(payloadJson);
+      return payload.sub || null;
+    } catch (error) {
+      console.error('Token inválido:', error);
+      return null;
+    }
+  };
 
   // Cargar solicitudes al montar el componente
   useEffect(() => {
@@ -74,6 +90,20 @@ export default function Sidebar({ menuItems = [] }) {
     if (user && (user.role === 'ROLE_ORGANIZADOR' || user.role === 'ROLE_ADMINISTRADOR' || user.role === 'manager' || user.role === 'admin')) {
       loadTournamentRequests();
     }
+  }, [user]);
+
+  useEffect(() => {
+    const email = getCorreoFromToken();
+    if (!email) return;
+
+    searchUserByEmail(email)
+      .then((data) => {
+        setUsername(data?.username || data?.email || '');
+      })
+      .catch((err) => {
+        console.error('Error obteniendo usuario para sidebar:', err);
+        setUsername('');
+      });
   }, [user]);
 
   const loadJoinRequests = async () => {
@@ -273,8 +303,9 @@ export default function Sidebar({ menuItems = [] }) {
 
             <div className="d-flex align-items-center">
               <Link to="/perfil" className="btn btn-outline-light btn-sm" style={{ margin: 5 }}>
-                <span className="navbar-text me-3" style={{ color: '#fff' }}>
-                  {user?.role ? ` ${user.role || user?.user || 'Finny_231'}` : 'Perfil Finny_231'}
+                <span className="navbar-text me-3" style={{ color: '#fff', display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
+                  <small style={{ fontSize: '0.75rem', opacity: 0.85 }}>{username || 'Cargando...'}</small>
+                  <span style={{ fontWeight: 600 }}>Mi perfil</span>
                 </span>
               </Link>
 

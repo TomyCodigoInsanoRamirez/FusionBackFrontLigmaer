@@ -1,5 +1,7 @@
 package mx.edu.utez.ligamerbackend.models;
 
+import com.fasterxml.jackson.annotation.JsonGetter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -73,8 +75,15 @@ public class User implements UserDetails {
     }
 
     @Override
+    @JsonIgnore // se usa para autenticación (correo), pero no para serializar al frontend
     public String getUsername() {
         return this.email;
+    }
+
+    // Exponer el username real en las respuestas JSON sin tocar getUsername() de UserDetails
+    @JsonGetter("username")
+    public String getVisibleUsername() {
+        return this.username;
     }
 
     @Override
