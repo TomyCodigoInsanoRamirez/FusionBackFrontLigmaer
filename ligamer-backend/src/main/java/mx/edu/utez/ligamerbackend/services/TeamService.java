@@ -166,6 +166,9 @@ public class TeamService {
 
         if (!jr.getTeam().getId().equals(team.getId()))
             throw new Exception("Solicitud no pertenece a este equipo.");
+        
+                if (!AppConstants.JOIN_REQUEST_PENDING.equalsIgnoreCase(jr.getStatus()))
+                    throw new Exception("Esta solicitud es informativa y no requiere acción.");
 
         if ("accept".equalsIgnoreCase(action)) {
             User user = jr.getUser();
@@ -215,11 +218,26 @@ public class TeamService {
         if (team.getOwner().getId().equals(user.getId()))
             throw new Exception("El dueño no puede abandonar el equipo.");
 
+        // Bloquear salida si el equipo participa en un torneo en curso
+        boolean hasOngoingTournament = team.getTournaments() != null && team.getTournaments()
+                .stream()
+                .anyMatch(t -> "En curso".equalsIgnoreCase(t.getEstado()));
+        if (hasOngoingTournament) {
+            throw new Exception("No puedes abandonar el equipo mientras participas en un torneo");
+        }
+
         Set<User> members = team.getMembers();
         if (members == null || !members.removeIf(u -> u.getId().equals(user.getId())))
             throw new Exception("No eres miembro del equipo.");
         team.setMembers(members);
         teamRepository.save(team);
+
+        // Crear notificación informativa para el dueño (se reutiliza join_requests como bandeja)
+        JoinRequest info = new JoinRequest();
+        info.setTeam(team);
+        info.setUser(user);
+        info.setStatus(AppConstants.JOIN_REQUEST_LEFT_INFO);
+        joinRequestRepository.save(info);
 
         // Publicar evento de usuario abandonó equipo
         eventPublisher.publishEvent(new UserLeftTeamEvent(this,

@@ -6,6 +6,7 @@ public final class AppConstants {
     public static final String JOIN_REQUEST_PENDING = "PENDING";
     public static final String JOIN_REQUEST_ACCEPTED = "ACCEPTED";
     public static final String JOIN_REQUEST_REJECTED = "REJECTED";
+    public static final String JOIN_REQUEST_LEFT_INFO = "LEFT_INFO";
 
     public static final String ROLE_ADMINISTRADOR = "ROLE_ADMINISTRADOR";
     public static final String ROLE_ORGANIZADOR = "ROLE_ORGANIZADOR";

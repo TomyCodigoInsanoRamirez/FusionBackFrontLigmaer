@@ -62,6 +62,7 @@ export default function Sidebar({ menuItems = [] }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [notificaciones, setNotificaciones] = useState([]); // solicitudes de equipo
+  const [infoNotificaciones, setInfoNotificaciones] = useState([]); // eventos informativos (p.ej. abandono)
   const [torneoNotificaciones, setTorneoNotificaciones] = useState([]); // solicitudes a torneos
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -113,9 +114,10 @@ export default function Sidebar({ menuItems = [] }) {
       const requests = await requestToTeams(user.teamId);
       console.log('Solicitudes obtenidas:', requests);
       
-      // Filtrar solo las solicitudes pendientes
       const pendingRequests = requests.filter(request => request.status === 'PENDING');
+      const infoRequests = requests.filter(request => request.status === 'LEFT_INFO');
       setNotificaciones(pendingRequests);
+      setInfoNotificaciones(infoRequests);
     } catch (error) {
       console.error('Error cargando solicitudes:', error);
     }
@@ -268,7 +270,7 @@ export default function Sidebar({ menuItems = [] }) {
     });
   };
 
-  const unreadCount = notificaciones.length + torneoNotificaciones.length;
+  const unreadCount = notificaciones.length + torneoNotificaciones.length + infoNotificaciones.length;
 
   return (
     <>
@@ -353,6 +355,25 @@ export default function Sidebar({ menuItems = [] }) {
               <div className="modal-body">
                 {unreadCount === 0 && (
                   <p className="text-center text-muted">No tienes solicitudes pendientes</p>
+                )}
+
+                {infoNotificaciones.length > 0 && (
+                  <>
+                    <h6 className="mb-2">Avisos de tu equipo</h6>
+                    {infoNotificaciones.map(notif => (
+                      <div key={`info-${notif.id}`} className="card mb-3 border-warning">
+                        <div className="card-body d-flex justify-content-between align-items-center">
+                          <div>
+                            <strong>{notif.user?.nombre || notif.user?.email}</strong> abandonó el equipo
+                            <div className="text-muted small">
+                              Fecha: {notif.createdAt ? new Date(notif.createdAt).toLocaleDateString() : ''}
+                            </div>
+                          </div>
+                          <span className="badge bg-warning text-dark">Aviso</span>
+                        </div>
+                      </div>
+                    ))}
+                  </>
                 )}
 
                 {notificaciones.length > 0 && (
