@@ -1152,67 +1152,32 @@ public class TournamentService {
 
     @Transactional(readOnly = true)
     public mx.edu.utez.ligamerbackend.dtos.RadarResponseDto getRadarStats(Long teamId, Long tournamentId) {
-        // Si se proporciona tournamentId, usamos standings de ese torneo; si no, usamos
-        // standings del equipo (por torneo último) o global
-        java.util.List<Standing> standings;
-        if (tournamentId != null) {
-            Tournament t = tournamentRepository.findById(tournamentId)
-                    .orElseThrow(() -> new RuntimeException("Torneo no encontrado."));
-            standings = standingRepository.findByTournamentOrderByPointsDescGoalDifferenceDescGoalsForDesc(t);
-        } else if (teamId != null) {
-            // Encontrar torneos del equipo y tomar standings relacionados
-            Team team = teamRepository.findById(teamId)
-                    .orElseThrow(() -> new RuntimeException("Equipo no encontrado."));
-            // Recolectar standings de todos los torneos donde el equipo participó
-            standings = new java.util.ArrayList<>();
-            for (Tournament t : team.getTournaments()) {
-                standings.addAll(standingRepository.findByTournamentOrderByPointsDescGoalDifferenceDescGoalsForDesc(t));
-            }
-        } else {
-            standings = standingRepository.findAll();
+        // Nueva lógica: victorias/derrotas por miembro usando campos User.wins/losses
+        // Sólo para el equipo solicitado (ignora otras escuadras)
+        if (teamId == null) {
+            throw new RuntimeException("El teamId es obligatorio para estadísticas de radar.");
         }
 
-        // Mapear por jugador: en el modelo actual Standing es por equipo, no por
-        // jugador.
-        // Para aproximar al formato que pidió Tomy (estadísticas por jugador), usaremos
-        // los miembros de los equipos
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new RuntimeException("Equipo no encontrado."));
+
         java.util.Map<Long, mx.edu.utez.ligamerbackend.dtos.PlayerStatDto> playerMap = new java.util.HashMap<>();
-        int totalWins = 0;
-        int totalLosses = 0;
 
-        for (Standing s : standings) {
-            int won = s.getWon() != null ? s.getWon() : 0;
-            int lost = s.getLost() != null ? s.getLost() : 0;
-            totalWins += won;
-            totalLosses += lost;
-            Team team = s.getTeam();
-            if (team != null && team.getMembers() != null) {
-                for (User member : team.getMembers()) {
-                    PlayerStatDto p = playerMap.get(member.getId());
-                    if (p == null) {
-                        p = new PlayerStatDto();
-                        p.setId(member.getId());
-                        // Construir nombre completo
-                        String fullName = member.getNombre();
-                        if (fullName != null && member.getApellidoPaterno() != null) {
-                            fullName += " " + member.getApellidoPaterno();
-                        }
-                        if (fullName != null && member.getApellidoMaterno() != null) {
-                            fullName += " " + member.getApellidoMaterno();
-                        }
+        // Incluir owner
+        if (team.getOwner() != null) {
+            addUserToPlayerMap(playerMap, team.getOwner());
+        }
 
-                        String displayName = (fullName != null && !fullName.trim().isEmpty()) ? fullName
-                                : member.getEmail();
-                        p.setNombre(displayName);
-                        p.setVictorias(0);
-                        p.setDerrotas(0);
-                        playerMap.put(member.getId(), p);
-                    }
-                    p.setVictorias(p.getVictorias() + won);
-                    p.setDerrotas(p.getDerrotas() + lost);
-                }
+        // Incluir miembros
+        if (team.getMembers() != null) {
+            for (User member : team.getMembers()) {
+                addUserToPlayerMap(playerMap, member);
             }
         }
+
+        // Calcular totales
+        int totalWins = playerMap.values().stream().mapToInt(p -> p.getVictorias() != null ? p.getVictorias() : 0).sum();
+        int totalLosses = playerMap.values().stream().mapToInt(p -> p.getDerrotas() != null ? p.getDerrotas() : 0).sum();
 
         mx.edu.utez.ligamerbackend.dtos.RadarResponseDto resp = new mx.edu.utez.ligamerbackend.dtos.RadarResponseDto();
         resp.setPlayers(new java.util.ArrayList<>(playerMap.values()));
@@ -1221,52 +1186,82 @@ public class TournamentService {
         return resp;
     }
 
+    private void addUserToPlayerMap(java.util.Map<Long, mx.edu.utez.ligamerbackend.dtos.PlayerStatDto> map, User user) {
+        if (user == null || user.getId() == null)
+            return;
+
+        PlayerStatDto dto = map.get(user.getId());
+        if (dto == null) {
+            dto = new PlayerStatDto();
+            dto.setId(user.getId());
+            String fullName = user.getNombre();
+            if (fullName != null && user.getApellidoPaterno() != null) {
+                fullName += " " + user.getApellidoPaterno();
+            }
+            if (fullName != null && user.getApellidoMaterno() != null) {
+                fullName += " " + user.getApellidoMaterno();
+            }
+            String displayName = (fullName != null && !fullName.trim().isEmpty()) ? fullName : user.getEmail();
+            dto.setNombre(displayName);
+            dto.setVictorias(0);
+            dto.setDerrotas(0);
+            map.put(user.getId(), dto);
+        }
+
+        int wins = user.getWins() != null ? user.getWins() : 0;
+        int losses = user.getLosses() != null ? user.getLosses() : 0;
+        dto.setVictorias(wins);
+        dto.setDerrotas(losses);
+    }
+
     @Transactional(readOnly = true)
     public java.util.List<mx.edu.utez.ligamerbackend.dtos.TournamentSeriesDto> getTournamentSeries(Long teamId) {
-        // Retornamos una lista de torneos con encuentros, ganados y perdidos del equipo
-        // si teamId provisto,
-        // si no se provee, devolvemos un resumen global por torneo
-        java.util.List<Tournament> tournaments = tournamentRepository.findAll();
+        if (teamId == null) {
+            throw new RuntimeException("El teamId es obligatorio para series por equipo.");
+        }
+
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new RuntimeException("Equipo no encontrado."));
+
         java.util.List<mx.edu.utez.ligamerbackend.dtos.TournamentSeriesDto> res = new java.util.ArrayList<>();
 
-        for (Tournament t : tournaments) {
+        for (Tournament t : team.getTournaments()) {
             int encuentros = 0;
             int ganados = 0;
             int perdidos = 0;
             java.util.List<Match> matches = matchRepository.findByTournamentOrderByMatchDateAsc(t);
+
             for (Match m : matches) {
-                // Considerar solo partidos con resultado
-                if (m.getHomeScore() != null && m.getAwayScore() != null) {
-                    encuentros++;
-                    if (teamId != null) {
-                        if (m.getHomeTeam() != null && m.getHomeTeam().getId().equals(teamId)) {
-                            if (m.getHomeScore() > m.getAwayScore())
-                                ganados++;
-                            else if (m.getHomeScore() < m.getAwayScore())
-                                perdidos++;
-                        } else if (m.getAwayTeam() != null && m.getAwayTeam().getId().equals(teamId)) {
-                            if (m.getAwayScore() > m.getHomeScore())
-                                ganados++;
-                            else if (m.getAwayScore() < m.getHomeScore())
-                                perdidos++;
-                        }
-                    } else {
-                        // global: sumamos victorias del local como "ganados" y visitante como
-                        // "perdidos" solo como indicador
-                        if (m.getHomeScore() > m.getAwayScore())
-                            ganados++;
-                        else if (m.getHomeScore() < m.getAwayScore())
-                            perdidos++;
-                    }
+                if (m.getHomeScore() == null || m.getAwayScore() == null) {
+                    continue; // solo partidos con resultado
+                }
+
+                boolean isHome = m.getHomeTeam() != null && m.getHomeTeam().getId().equals(teamId);
+                boolean isAway = m.getAwayTeam() != null && m.getAwayTeam().getId().equals(teamId);
+                if (!isHome && !isAway) {
+                    continue; // ignorar partidos donde el equipo no jugó
+                }
+
+                encuentros++;
+                if (isHome) {
+                    if (m.getHomeScore() > m.getAwayScore()) ganados++;
+                    else if (m.getHomeScore() < m.getAwayScore()) perdidos++;
+                } else { // isAway
+                    if (m.getAwayScore() > m.getHomeScore()) ganados++;
+                    else if (m.getAwayScore() < m.getHomeScore()) perdidos++;
                 }
             }
-            mx.edu.utez.ligamerbackend.dtos.TournamentSeriesDto dto = new mx.edu.utez.ligamerbackend.dtos.TournamentSeriesDto();
-            dto.setId(t.getId());
-            dto.setTorneo(t.getName());
-            dto.setEncuentros(encuentros);
-            dto.setGanados(ganados);
-            dto.setPerdidos(perdidos);
-            res.add(dto);
+
+            // Solo agregar torneos donde el equipo tuvo al menos un encuentro con resultado
+            if (encuentros > 0) {
+                mx.edu.utez.ligamerbackend.dtos.TournamentSeriesDto dto = new mx.edu.utez.ligamerbackend.dtos.TournamentSeriesDto();
+                dto.setId(t.getId());
+                dto.setTorneo(t.getName());
+                dto.setEncuentros(encuentros);
+                dto.setGanados(ganados);
+                dto.setPerdidos(perdidos);
+                res.add(dto);
+            }
         }
 
         return res;
@@ -1309,9 +1304,6 @@ public class TournamentService {
     }
 
     public List<Map<String, Object>> getJoinRequests(Long tournamentId, String requesterEmail) throws Exception {
-        Tournament tournament = tournamentRepository.findById(tournamentId)
-                .orElseThrow(() -> new RuntimeException("Torneo no encontrado."));
-
         User requester = userRepository.findByEmail(requesterEmail)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado."));
 

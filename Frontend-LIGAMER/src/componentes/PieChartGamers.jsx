@@ -1,96 +1,49 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { PieChart } from '@mui/x-charts/PieChart';
-import {getPieChartData} from './../utils/Service/usuario';
-import { useState, useEffect } from 'react';
-import { useMemo } from 'react';
-import {searchUserByEmail} from "./../utils/Service/General";
-
+import { useAuth } from '../context/AuthContext';
+import { getPieChartData } from './../utils/Service/usuario';
 
 export default function PieChartGamers() {
-  // Datos: Distribución de victorias por equipo en un torneo
-  const data = [
-    { id: 1, value: 20, label: 'Derrortas', color: '#7e1010ff' }, // Rojo
-     { id: 2, value: 80, label: 'Victorias', color: '#0f690fff' }, // Verde
-    // { id: 3, value: 15, label: 'Team Gamma', color: '#5555ff' }, // Azul
-    // { id: 4, value: 10, label: 'Team Delta', color: '#ffaa00' }, // Naranja
-  ];
+  const { user } = useAuth();
+  const teamId = user?.teamId || user?.ownedTeam?.id || 0;
 
   const [chartData, setChartData] = useState([]);
-  const [id, setId] = useState(null);
-
-
-  const getCorreoFromToken = () => {
-        const token = localStorage.getItem("token");
-        if (!token) return null;
-    
-        try {
-          const payloadBase64 = token.split(".")[1];
-          const payloadJson = atob(payloadBase64);
-          const payload = JSON.parse(payloadJson);
-          return payload.sub || null;
-        } catch (error) {
-          console.error("Token inválido:", error);
-          return null;
-        }
-      };
-    
-      // Cargar información del usuario al montar el componente
-      useEffect(() => {
-        const email = getCorreoFromToken();
-        if (email) {
-          searchUserByEmail(email)
-            .then((data) => {
-              setId(data.id);       
-              console.log("ID usuario en LineChartGamers:", data.id); 
-            })
-            .catch((err) => console.error("Error al cargar usuario:", err));
-        }
-      }, []);
-
-
-  useEffect(() => { 
-    getPieChartData(id)
-      .then((data) => {
-        setChartData(data.data); 
-        //console.log("Data chart: "+JSON.stringify(data.data));
-      })
-      .catch((err) => console.log(err));
-  }, []);
-
-  
 
   useEffect(() => {
-    console.log("Estado chartData actualizado:", chartData);
-  }, [chartData]);
+    if (teamId === null || teamId === undefined) return;
 
-  const chartDataa = useMemo(() => {
-    const total = chartData.reduce((sum, item) => sum + item.value, 0);
-    console.log("Total valor:", total);
+    getPieChartData(teamId)
+      .then((data) => {
+        // Esperamos un arreglo de { id, value, label, color }
+        setChartData(Array.isArray(data.data) ? data.data : []);
+      })
+      .catch((err) => {
+        console.error('Error obteniendo pie chart:', err);
+        setChartData([]);
+      });
+  }, [teamId]);
 
+  const chartDataPercent = useMemo(() => {
+    if (!Array.isArray(chartData) || chartData.length === 0) return [];
+    const total = chartData.reduce((sum, item) => sum + (item.value || 0), 0);
     return chartData.map((item) => {
-      const percentage = total === 0 ? 0 : Math.round((item.value / total) * 100);
-      console.log(`Item: ${item.label}, Value: ${item.value}, Percentage: ${percentage}%`);
-      return {
-        ...item,
-        value: percentage, // valor para mostrar
-      };
+      const value = item.value || 0;
+      const percentage = total === 0 ? 0 : Math.round((value / total) * 100);
+      return { ...item, value: percentage };
     });
   }, [chartData]);
 
-  useEffect(() => {
-    console.log("Estado chartDataaaaaaa actualizado:", chartDataa);
-  }, [chartData]);
-  
+  if (!chartDataPercent.length) {
+    return <div className="text-muted">Sin datos de victorias/derrotas para tu equipo.</div>;
+  }
+
   return (
     <div className="chart-container">
-      {/* <h3 style={{ color: '#fff', textAlign: 'center', marginBottom: '10px' }}>
-        Tasa de desempeño del equipo
-      </h3> */}
       <PieChart
         series={[
           {
-            data: chartDataa,
-            innerRadius: 50, // Donut chart
+            data: chartDataPercent,
+            innerRadius: 50,
             outerRadius: 120,
             paddingAngle: 3,
             cornerRadius: 5,

@@ -23,21 +23,6 @@ export default function DashboardLayoutUserGraficas({ title, children }) {
       <div className="mainContent">
         <div className="dashboard-container container-fluid">
           <h1>Información del equipo</h1>
-          <div className="row mb-4">
-            <div className="col-12 col-md-4">
-              <div className="card shadow-sm p-3">
-                <div className="d-flex justify-content-between align-items-center">
-                  <div>
-                    <div className="text-muted" style={{ fontSize: '0.9rem' }}>Mis resultados</div>
-                    <div style={{ fontSize: '1.4rem', fontWeight: 'bold' }}>
-                      {user?.wins ?? 0} - {user?.losses ?? 0}
-                    </div>
-                  </div>
-                  <i className="bi bi-bar-chart-fill fs-3 text-primary"></i>
-                </div>
-              </div>
-            </div>
-          </div>
           <div className="charts-row">
             <div className="chart-box col-12 col-md-6">
               <PieChartGamers />

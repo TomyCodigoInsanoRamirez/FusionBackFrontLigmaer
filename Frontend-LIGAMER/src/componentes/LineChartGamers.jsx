@@ -12,65 +12,30 @@ import {
 
 import { useState, useEffect } from 'react';
 import {getLineChartData} from './../utils/Service/usuario';
-import {searchUserByEmail} from "./../utils/Service/General";
-
-
-// Datos de ejemplo: puedes reemplazar por tus datos reales
-const data = [
-  { torneo: 'LIGAMER 2022', encuentros: 45, ganados: 28, perdidos: 17 },
-  { torneo: 'LIGAMER 2023', encuentros: 62, ganados: 40, perdidos: 22 },
-  { torneo: 'Copa Pro 2024', encuentros: 58, ganados: 36, perdidos: 22 },
-  { torneo: 'LIGAMER 2025', encuentros: 73, ganados: 52, perdidos: 21 },
-  { torneo: 'Elite Cup 2025', encuentros: 65, ganados: 41, perdidos: 24 },
-];
-
+import { useAuth } from '../context/AuthContext';
 
 export default function TorneosLineChart() {
-    const [id, setId] = useState(null);
-
-   // Obtener correo del token
-    const getCorreoFromToken = () => {
-      const token = localStorage.getItem("token");
-      if (!token) return null;
-  
-      try {
-        const payloadBase64 = token.split(".")[1];
-        const payloadJson = atob(payloadBase64);
-        const payload = JSON.parse(payloadJson);
-        return payload.sub || null;
-      } catch (error) {
-        console.error("Token inválido:", error);
-        return null;
-      }
-    };
-  
-    // Cargar información del usuario al montar el componente
-    useEffect(() => {
-      const email = getCorreoFromToken();
-      if (email) {
-        searchUserByEmail(email)
-          .then((data) => {
-            setId(data.teamId);       
-            console.log("ID usuario en LineChartGamers:", data.teamId); 
-          })
-          .catch((err) => console.error("Error al cargar usuario:", err));
-      }
-    }, []);
-
+  const { user } = useAuth();
+  const teamId = user?.teamId || user?.ownedTeam?.id || 0;
   const [chartData, setChartData] = useState([]);
 
-useEffect(() => {
-  getLineChartData(id)
-    .then((data) => {
-      setChartData(data.data);    
-      console.log("Data line chart:", data.data);
-    })
-    .catch((err) => console.log(err));
-}, []);
+  useEffect(() => {
+    if (teamId === null || teamId === undefined) return;
 
-useEffect(() => {
-  console.log("Estado chartData actualizado:", chartData);
-}, [chartData]);
+    getLineChartData(teamId)
+      .then((data) => {
+        setChartData(Array.isArray(data.data) ? data.data : []);
+      })
+      .catch((err) => {
+        console.error('Error obteniendo line chart:', err);
+        setChartData([]);
+      });
+  }, [teamId]);
+
+  if (!chartData.length) {
+    return <div className="text-muted">Sin historial de torneos para este equipo.</div>;
+  }
+
   return (
     <ResponsiveContainer width="100%" height={300}>
       <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 10 }}>
@@ -111,7 +76,6 @@ useEffect(() => {
         <YAxis label={{ value: 'Encuentros', angle: -90, position: 'insideLeft' }} />
         <Tooltip />
         {/* <Legend /> */}
-
         
       </LineChart>
     </ResponsiveContainer>
