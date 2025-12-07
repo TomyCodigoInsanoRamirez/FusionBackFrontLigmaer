@@ -67,6 +67,9 @@ export default function TablaCard({ encabezados = [], datos = [], acciones = [],
     } else if (fila.estado === "Guardado") {
       navigate(`/TorneoGuardado/${fila.id}`, { replace: true, state: { from: fila } }); 
       return;
+    } else if (fila.estado === "Finalizado") {
+      navigate(`/TorneoFinalizado/${fila.id}`, { replace: true, state: { from: fila } });
+      return;
     }
   }, [navigate]);
 

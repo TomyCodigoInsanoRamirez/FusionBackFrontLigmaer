@@ -890,6 +890,7 @@ useEffect(() => {
 
   const winnerNodeId = nodes.find((n) => !graph.childToParent[n.id]);
   const winnerTeam = winnerNodeId ? teamData[winnerNodeId.id] : null;
+  const championName = data?.championTeamName || winnerTeam?.name || null;
 
   const canFinalize = user?.role === 'ROLE_ORGANIZADOR' || user?.role === 'ROLE_ADMINISTRADOR';
 
@@ -1234,6 +1235,12 @@ const handleNumTeamsChange = (newValue) => {
           </div>
         )}
 
+        {estado === "Finalizado" && championName && (
+          <div className="position-absolute top-0 end-0 bg-success text-white p-2 rounded" style={{ zIndex: 5 }}>
+            Campeón: {championName}
+          </div>
+        )}
+
         <div className="position-absolute top-0 end-0 bg-white border border-dark p-1 rounded" style={{ pointerEvents: 'none', zIndex: 5, display: hoveredNode ? 'block' : 'none' }}>
           {teamData[hoveredNode]?.name || 'por definir'}
         </div>
@@ -1304,7 +1311,7 @@ const handleNumTeamsChange = (newValue) => {
           })()}
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="primary" onClick={handleSave} disabled={estado !== "En curso" && !dateInput}>
+          <Button variant="primary" onClick={handleSave} disabled={estado !== "En curso"}>
             Guardar
           </Button>
           <Button variant="secondary" onClick={handleCloseModal}>Cancelar</Button>

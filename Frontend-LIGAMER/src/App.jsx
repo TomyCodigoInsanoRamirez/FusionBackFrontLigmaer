@@ -14,6 +14,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import TorneoEnCurso from './pages/TorneoEnCurso';
 import VerTorneoGuardado from './pages/TorneoGuardado';
+import TorneoFinalizado from './pages/TorneoFinalizado';
 import PerfilDashboardManager from './pages/PerfilDashboardManager';
 import TorneosDisponibless from './pages/TorneosDisponibles';
 import Perfil from './pages/Perfil';
@@ -145,6 +146,8 @@ export default function App() {
           <Route path="/TorneoGuardado/:id" element={<ProtectedRoute><RoleRoute allowedRoles={['manager']}><CrearTorneo estado="Guardado" /></RoleRoute></ProtectedRoute>} />
 
           <Route path="/TorneoEnCurso/:id" element={<ProtectedRoute><RoleRoute allowedRoles={['manager', 'user']}><CrearTorneo estado="En curso" /></RoleRoute></ProtectedRoute>} />
+
+          <Route path="/TorneoFinalizado/:id" element={<ProtectedRoute><RoleRoute allowedRoles={['manager', 'user']}><CrearTorneo estado="Finalizado" /></RoleRoute></ProtectedRoute>} />
 
 
           <Route path="/forbidden" element={<Forbidden />} /> 
