@@ -82,6 +82,15 @@ export default function LoginPage() {
       setIsUserDisabled(false);
       localStorage.removeItem(`failedAttempts_${username}`);
       localStorage.removeItem(`userDisabled_${username}`);
+
+      // Alerta de bienvenida en inicio de sesión exitoso
+      await MySwal.fire({
+        icon: 'success',
+        title: '¡Bienvenido! 🎮',
+        text: 'Has iniciado sesión correctamente.',
+        confirmButtonText: 'Continuar',
+        confirmButtonColor: '#4A3287'
+      });
       
       // Si veníamos de una ruta protegida, volver ahí, si no, navegar según rol
       if (from) {

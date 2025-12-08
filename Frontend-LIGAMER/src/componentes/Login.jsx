@@ -62,6 +62,12 @@ export default function Login() {
       // Si llegamos aquí, se considera login exitoso
       // ...existing code: manejo de login exitoso (token, redirección, etc.)...
       console.log("Login successful", data);
+      MySwal.fire({
+        icon: "success",
+        title: "¡Bienvenido!",
+        text: "Has iniciado sesión correctamente.",
+        confirmButtonText: "Continuar",
+      });
     } catch (err) {
       console.error("Login request failed", err);
       MySwal.fire({
