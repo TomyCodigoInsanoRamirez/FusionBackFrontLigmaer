@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import "bootstrap-icons/font/bootstrap-icons.css"; 
+import "bootstrap-icons/font/bootstrap-icons.css";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
 import { activeUser, getUserByEmail } from '../utils/Service/General';
@@ -21,6 +21,7 @@ export default function LoginPage() {
     const stored = localStorage.getItem(`userDisabled_${username}`);
     return stored === 'true';
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || null;
@@ -31,9 +32,9 @@ export default function LoginPage() {
   useEffect(() => {
     // Si el usuario ya está autenticado y llega a /login (por ejemplo con el botón "atrás"),
     // redirigirlo automáticamente a su inicio según el rol.
-    if(loading) return; // Esperar a que se cargue el estado de autenticación
+    if (loading) return; // Esperar a que se cargue el estado de autenticación
     if (!user || hasRedirected.current) return;
-    
+
     hasRedirected.current = true;
     const roleMap = {
       'ROLE_JUGADOR': '/user',
@@ -49,7 +50,7 @@ export default function LoginPage() {
     if (username) {
       const storedAttempts = localStorage.getItem(`failedAttempts_${username}`);
       const storedDisabled = localStorage.getItem(`userDisabled_${username}`);
-      
+
       setFailedAttempts(storedAttempts ? parseInt(storedAttempts) : 0);
       setIsUserDisabled(storedDisabled === 'true');
     } else {
@@ -57,11 +58,12 @@ export default function LoginPage() {
       setIsUserDisabled(false);
     }
   }, [username]);
-  
+
   if (loading) return null; // o un spinner
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return; // Prevent double submission
     setError(null);
 
     // Verificar si el usuario está deshabilitado
@@ -74,6 +76,8 @@ export default function LoginPage() {
       });
       return;
     }
+
+    setIsSubmitting(true);
 
     try {
       const u = await login(username, password);
@@ -91,7 +95,7 @@ export default function LoginPage() {
         confirmButtonText: 'Continuar',
         confirmButtonColor: '#4A3287'
       });
-      
+
       // Si veníamos de una ruta protegida, volver ahí, si no, navegar según rol
       if (from) {
         navigate(from, { replace: true });
@@ -111,13 +115,13 @@ export default function LoginPage() {
         try {
           // Obtener información del usuario por email para conseguir su ID
           const userInfo = await getUserByEmail(username);
-          
+
           if (userInfo && userInfo.data && userInfo.data.id) {
             // Llamar al endpoint activeUser para deshabilitar (cambiar estado a false)
             await activeUser(userInfo.data.id);
             setIsUserDisabled(true);
             localStorage.setItem(`userDisabled_${username}`, 'true');
-            
+
             MySwal.fire({
               icon: "error",
               title: "Usuario deshabilitado",
@@ -156,9 +160,11 @@ export default function LoginPage() {
           confirmButtonText: "Aceptar"
         });
       }
-      
+
       // Mantener texto de error opcionalmente para la UI
       setError(err?.message || "Credenciales incorrectas");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -204,7 +210,7 @@ export default function LoginPage() {
                       className="eye-btn"
                       onClick={() => setShowPassword(!showPassword)}
                       aria-label="Mostrar contraseña"
-                      style={{ right: 10 }}  
+                      style={{ right: 10 }}
                     >
                       <i className={`bi ${showPassword ? "bi-eye-slash" : "bi-eye"}`}></i>
                     </button>
@@ -229,13 +235,19 @@ export default function LoginPage() {
                   )}
 
                   <div className="d-grid gap-2 mb-3">
-                    <button 
-                      type="submit" 
-                      className="btn" 
+                    <button
+                      type="submit"
+                      className="btn"
                       style={{ backgroundColor: '#4A3287', color: 'white' }}
-                      disabled={isUserDisabled}
+                      disabled={isUserDisabled || isSubmitting}
                     >
-                      {isUserDisabled ? 'Usuario deshabilitado' : 'Iniciar sesión'}
+                      {isSubmitting ? (
+                        <div className="spinner-border spinner-border-sm text-light" role="status">
+                          <span className="visually-hidden">Cargando...</span>
+                        </div>
+                      ) : (
+                        isUserDisabled ? 'Usuario deshabilitado' : 'Iniciar sesión'
+                      )}
                     </button>
                   </div>
 

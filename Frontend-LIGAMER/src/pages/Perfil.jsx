@@ -12,10 +12,10 @@ const MySwal = withReactContent(Swal);
 export default function PerfilUsuario() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  
+
   // Estados para la información del usuario
   const [informacionUsuario, setInformacionUsuario] = useState(null);
-  
+
   // Estados para edición de datos personales
   const [editingPersonal, setEditingPersonal] = useState(false);
   const [personalData, setPersonalData] = useState({
@@ -133,7 +133,7 @@ export default function PerfilUsuario() {
       number: /\d/.test(password),
       special: /[!@#$%^&*(),.?":{}|<>]/.test(password)
     };
-    
+
     validation.isValid = validation.length && validation.uppercase && validation.number && validation.special;
     setPasswordValidation(validation);
   };
@@ -450,12 +450,12 @@ export default function PerfilUsuario() {
       try {
         // AQUÍ DEBES LLAMAR A TU ENDPOINT DE ACTUALIZAR INTERESES
         // Ejemplo: await updateUserInterests(interests);
-        
+
         setInformacionUsuario({
           ...informacionUsuario,
           intereses: interests
         });
-        
+
         setEditingInterests(false);
         setShowAddGameModal(false);
         MySwal.fire({
@@ -514,7 +514,7 @@ export default function PerfilUsuario() {
                   </Button>
                 </div>
                 <div className="section-body">
-                  <p><strong>Nombre:</strong> {informacionUsuario?.nombre + " " + informacionUsuario?.apellidoPaterno + " " + informacionUsuario?.apellidoMaterno || 'No definido'}</p>
+                  <p><strong>Nombre:</strong> {[informacionUsuario?.nombre, informacionUsuario?.apellidoPaterno, informacionUsuario?.apellidoMaterno].filter(Boolean).join(" ") || 'No definido'}</p>
                   <p><strong>Correo:</strong> {informacionUsuario?.email || 'No definido'}</p>
                   <p><strong>Usuario:</strong> {informacionUsuario?.username || 'No definido'}</p>
                 </div>
@@ -812,7 +812,7 @@ export default function PerfilUsuario() {
                   onChange={(e) => handlePasswordChange('new', e.target.value)}
                   placeholder="Escribe la nueva contraseña"
                   className={`${newPassword && passwordValidation.isValid ? 'is-valid' :
-                      newPassword && !passwordValidation.isValid ? 'is-invalid' : ''
+                    newPassword && !passwordValidation.isValid ? 'is-invalid' : ''
                     }`}
                   style={{
                     paddingRight: newPassword && passwordValidation.isValid ? '95px' : '40px'

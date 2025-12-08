@@ -52,7 +52,7 @@ export async function updateProfile(data) {
 //--------------------------------------------
 //Endpoitn: /api/auth/register
 //--------------------------------------------
-export async function registerUser(userData){
+export async function registerUser(userData) {
   try {
     const response = await api.post("/api/auth/register", userData);
     return response.data;
@@ -64,7 +64,7 @@ export async function registerUser(userData){
 //--------------------------------------------
 // Endopint: /api/auth/forgot-password
 //--------------------------------------------
-export async function resetPassword(email){
+export async function resetPassword(email) {
   try {
     const response = await api.post("/api/auth/forgot-password", { email });
     return response.data;
@@ -76,7 +76,7 @@ export async function resetPassword(email){
 //---------------------------------------------
 //Endopint: /api/profile/change-password
 //---------------------------------------------
-export async function changePassword(data){
+export async function changePassword(data) {
   try {
     const response = await api.put("/api/profile/change-password", data);
     return response.data;
@@ -88,7 +88,7 @@ export async function changePassword(data){
 //--------------------------------------------
 //Endopoint: /api/admin/users
 //--------------------------------------------
-export async function getAllUsers(){
+export async function getAllUsers() {
   try {
     const response = await api.get("/api/admin/users");
     console.log("Usuarios obtenidos:", response.data);
@@ -101,7 +101,7 @@ export async function getAllUsers(){
 //--------------------------------------------
 // Endopoint: /api/tournaments
 //--------------------------------------------
-export async function getAllTournaments(){ //
+export async function getAllTournaments() { //
   try {
     const response = await api.get("/api/tournaments/summary");
     return response.data;
@@ -114,7 +114,7 @@ export async function getAllTournaments(){ //
 //--------------------------------------------
 // Endpoint: /api/tournaments/{tournamentId}/join-requests (solicitar unir equipo)
 //--------------------------------------------
-export async function requestJoinTournament(tournamentId, teamId){
+export async function requestJoinTournament(tournamentId, teamId) {
   try {
     const response = await api.post(`/api/tournaments/${tournamentId}/join-requests`, { teamId });
     return response.data;
@@ -127,7 +127,7 @@ export async function requestJoinTournament(tournamentId, teamId){
 //--------------------------------------------
 // Endopoint: /api/tournaments/my-tournaments
 //--------------------------------------------
-export async function getAllMyTournaments(){ 
+export async function getAllMyTournaments() {
   try {
     const response = await api.get("/api/tournaments/my-tournaments");
     return response.data;
@@ -140,7 +140,17 @@ export async function getAllMyTournaments(){
 //--------------------------------------------
 // Endpoints: /api/tournaments/{id}/join-requests (organizador)
 //--------------------------------------------
-export async function getTournamentJoinRequests(tournamentId){
+export async function getAllPendingJoinRequests() {
+  try {
+    const response = await api.get('/api/tournaments/all-pending-join-requests');
+    return response.data;
+  } catch (error) {
+    console.error("Error obteniendo todas las solicitudes pendientes:", error);
+    throw error;
+  }
+}
+
+export async function getTournamentJoinRequests(tournamentId) {
   try {
     const response = await api.get(`/api/tournaments/${tournamentId}/join-requests`);
     return response.data;
@@ -150,7 +160,7 @@ export async function getTournamentJoinRequests(tournamentId){
   }
 }
 
-export async function respondTournamentJoinRequest(tournamentId, requestId, status){
+export async function respondTournamentJoinRequest(tournamentId, requestId, status) {
   try {
     const response = await api.put(`/api/tournaments/${tournamentId}/join-requests/${requestId}`, { status });
     return response.data;
@@ -162,7 +172,7 @@ export async function respondTournamentJoinRequest(tournamentId, requestId, stat
 //--------------------------------------------
 // Endpoint: /api/teams para crear equipos (usa multipart por archivo opcional)
 //--------------------------------------------
-export async function createTeam(teamData){
+export async function createTeam(teamData) {
   // Acepta tanto un objeto plano como un FormData. Si es objeto, se transforma a FormData.
   const payload = teamData instanceof FormData ? teamData : (() => {
     const fd = new FormData();
@@ -193,7 +203,7 @@ export async function createTeam(teamData){
 //--------------------------------------------
 // Endpoint: /api/admin/users/search?email=
 //--------------------------------------------
-export async function searchUserByEmail(email){   
+export async function searchUserByEmail(email) {
   console.log("Buscando usuario por email:", email);
   try {
     const response = await api.get(`/api/admin/users/search?email=${encodeURIComponent(email)}`);
@@ -202,29 +212,29 @@ export async function searchUserByEmail(email){
   } catch (error) {
     console.error("Error buscando el usuario por email:", error);
     throw error;
-  } 
+  }
 }
 //------------------------------------------
 // Endpoint: /api/admin/users/:userId
 // -----------------------------------------
-export async function activeUser(userId){
-    try {
-        const response = await api.put(`/api/admin/users/${userId}`);
-        return response.data;
-    } catch (error) {
-        console.error("Error activando el usuario:", error);
-        throw error;
+export async function activeUser(userId) {
+  try {
+    const response = await api.put(`/api/admin/users/${userId}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error activando el usuario:", error);
+    throw error;
   }
 }
 //------------------------------------------
 // Endpoint: /api/admin/users/search?email= (para obtener usuario por email)
 // -----------------------------------------
-export async function getUserByEmail(email){
-    try {
-        const response = await api.get(`/api/admin/users/search?email=${email}`);
-        return response.data;
-    } catch (error) {
-        console.error("Error obteniendo usuario por email:", error);
-        throw error;
-    }
+export async function getUserByEmail(email) {
+  try {
+    const response = await api.get(`/api/admin/users/search?email=${email}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error obteniendo usuario por email:", error);
+    throw error;
+  }
 }

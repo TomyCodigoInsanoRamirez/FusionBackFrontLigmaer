@@ -4,12 +4,12 @@ import { Modal, Button } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
-import {requestToJoinTeam, requestToTeams} from '../utils/Service/usuario';
-import {assignOrganizerRole} from '../utils/Service/administrador';
+import { requestToJoinTeam, requestToTeams } from '../utils/Service/usuario';
+import { assignOrganizerRole } from '../utils/Service/administrador';
 import { useAuth } from '../context/AuthContext';
 import { getProfile } from '../utils/Service/General';
 
-export default function TablaCard({ encabezados = [], datos = [], acciones = [], onUnirse, actionButton }) {
+export default function TablaCard({ encabezados = [], datos = [], acciones = [], onUnirse, actionButton, loading = false }) {
   const [paginaActual, setPaginaActual] = useState(1);
   const [modalAbierto, setModalAbierto] = useState(false);
   const [filaSeleccionada, setFilaSeleccionada] = useState(null);
@@ -65,7 +65,7 @@ export default function TablaCard({ encabezados = [], datos = [], acciones = [],
       navigate(`/TorneoEnCurso/${fila.id}`, { replace: true, state: { from: fila } });
       return;
     } else if (fila.estado === "Guardado") {
-      navigate(`/TorneoGuardado/${fila.id}`, { replace: true, state: { from: fila } }); 
+      navigate(`/TorneoGuardado/${fila.id}`, { replace: true, state: { from: fila } });
       return;
     } else if (fila.estado === "Finalizado") {
       navigate(`/TorneoFinalizado/${fila.id}`, { replace: true, state: { from: fila } });
@@ -87,24 +87,24 @@ export default function TablaCard({ encabezados = [], datos = [], acciones = [],
       // 1. Verificar si el usuario ya tiene equipo
       const profile = await getProfile();
       const userProfile = profile.data;
-      
+
       if (userProfile.team || userProfile.ownedTeam) {
-          MySwal.fire({
-            icon: 'warning',
-            title: 'Abandona tu equipo actual',
-            text: 'Abandona tu equipo actual para unirte a otro',
-            confirmButtonColor: '#4A3287'
-          });
-          return false;
+        MySwal.fire({
+          icon: 'warning',
+          title: 'Abandona tu equipo actual',
+          text: 'Abandona tu equipo actual para unirte a otro',
+          confirmButtonColor: '#4A3287'
+        });
+        return false;
       }
 
       // 2. Verificar si ya envió solicitud a este equipo
       try {
         const requests = await requestToTeams(teamId);
-        const userRequest = requests.find(request => 
+        const userRequest = requests.find(request =>
           request.user?.email === user?.email && request.status === 'PENDING'
         );
-        
+
         if (userRequest) {
           MySwal.fire({
             icon: 'warning',
@@ -139,7 +139,7 @@ export default function TablaCard({ encabezados = [], datos = [], acciones = [],
 
     // Obtener el nombre/título del elemento de forma más robusta
     const nombreElemento = fila.nombre || fila.name || fila.tournamentName || 'elemento';
-    
+
     let alertConfig = {
       title: `${accion} torneo`,
       text: `Ingresar para ver los datos del torneo: ${nombreElemento}`,
@@ -181,7 +181,7 @@ export default function TablaCard({ encabezados = [], datos = [], acciones = [],
           confirmButtonText: 'Aceptar',
           confirmButtonColor: '#4A3287'
         }).then(() => {
-         // abrirModal(fila);
+          // abrirModal(fila);
           try {
             assignOrganizerRole(fila.id)
               .then((data) => { console.log("Respuesta asignar organizador:", data); })
@@ -216,13 +216,13 @@ export default function TablaCard({ encabezados = [], datos = [], acciones = [],
         // Validar antes de proceder
         validateJoinTeam(fila.id).then((canJoin) => {
           if (!canJoin) return; // Si no puede unirse, salir
-          
+
           // Si pasa las validaciones, enviar solicitud
           console.log("Solicitando unirse al equipo:", fila);
           //if (onUnirse) onUnirse(fila);
-          
+
           requestToJoinTeam(fila.id)
-            .then((data) => { 
+            .then((data) => {
               console.log("Respuesta unirse al equipo:", data);
               // Mostrar mensaje de éxito SOLO después de que la petición sea exitosa
               MySwal.fire({
@@ -233,17 +233,17 @@ export default function TablaCard({ encabezados = [], datos = [], acciones = [],
                 confirmButtonColor: '#4A3287'
               });
             })
-            .catch((err) => { 
+            .catch((err) => {
               console.error("Error unirse al equipo:", err);
               // Mostrar mensaje de error si la petición falla
               const errorMessage = 'Ya has solicitado unirte a este equipo, espera respuesta del administrador';
               MySwal.fire({
-                  icon: 'warning',
-                  title: 'Solicitud duplicada',
-                  text: errorMessage,
-                  confirmButtonText: 'Aceptar',
-                  confirmButtonColor: '#4A3287'
-                });
+                icon: 'warning',
+                title: 'Solicitud duplicada',
+                text: errorMessage,
+                confirmButtonText: 'Aceptar',
+                confirmButtonColor: '#4A3287'
+              });
             });
         });
         return;
@@ -433,7 +433,12 @@ export default function TablaCard({ encabezados = [], datos = [], acciones = [],
 
         {/* Filas */}
         <div className="filas">
-          {datosPaginados.length === 0 ? (
+          {loading ? (
+            // Mostrar esqueletos si está cargando
+            [...Array(porPagina)].map((_, i) => (
+              <div key={i} className="skeleton-row" />
+            ))
+          ) : datosPaginados.length === 0 ? (
             <div className="fila-vacia">No se encontraron resultados.</div>
           ) : (
             datosPaginados.map((fila) => (

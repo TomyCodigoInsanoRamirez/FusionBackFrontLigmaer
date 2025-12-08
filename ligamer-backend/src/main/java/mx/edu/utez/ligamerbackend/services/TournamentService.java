@@ -575,7 +575,8 @@ public class TournamentService {
                 }
             }
 
-            // 2) Reiniciar standings existentes a cero para recalcular con los nuevos resultados
+            // 2) Reiniciar standings existentes a cero para recalcular con los nuevos
+            // resultados
             resetStandingsForTournament(saved);
 
             // 3) Eliminar partidos previos y recrearlos
@@ -634,7 +635,8 @@ public class TournamentService {
                 }
             }
 
-            // 4) Aplicar estadísticas para nuevos partidos finalizados (incluye victorias de jugadores)
+            // 4) Aplicar estadísticas para nuevos partidos finalizados (incluye victorias
+            // de jugadores)
             for (Match match : newMatches) {
                 if ("FINISHED".equals(match.getStatus())
                         && match.getHomeScore() != null && match.getAwayScore() != null) {
@@ -1126,7 +1128,8 @@ public class TournamentService {
 
         Set<User> players = new HashSet<>();
 
-        // Asegurar que las relaciones estén cargadas; si vienen perezosas, recargar desde DB
+        // Asegurar que las relaciones estén cargadas; si vienen perezosas, recargar
+        // desde DB
         Team hydrated = team;
         try {
             if ((team.getMembers() == null || team.getMembers().isEmpty()) && team.getId() != null) {
@@ -1276,8 +1279,10 @@ public class TournamentService {
         }
 
         // Calcular totales
-        int totalWins = playerMap.values().stream().mapToInt(p -> p.getVictorias() != null ? p.getVictorias() : 0).sum();
-        int totalLosses = playerMap.values().stream().mapToInt(p -> p.getDerrotas() != null ? p.getDerrotas() : 0).sum();
+        int totalWins = playerMap.values().stream().mapToInt(p -> p.getVictorias() != null ? p.getVictorias() : 0)
+                .sum();
+        int totalLosses = playerMap.values().stream().mapToInt(p -> p.getDerrotas() != null ? p.getDerrotas() : 0)
+                .sum();
 
         mx.edu.utez.ligamerbackend.dtos.RadarResponseDto resp = new mx.edu.utez.ligamerbackend.dtos.RadarResponseDto();
         resp.setPlayers(new java.util.ArrayList<>(playerMap.values()));
@@ -1344,11 +1349,15 @@ public class TournamentService {
 
                 encuentros++;
                 if (isHome) {
-                    if (m.getHomeScore() > m.getAwayScore()) ganados++;
-                    else if (m.getHomeScore() < m.getAwayScore()) perdidos++;
+                    if (m.getHomeScore() > m.getAwayScore())
+                        ganados++;
+                    else if (m.getHomeScore() < m.getAwayScore())
+                        perdidos++;
                 } else { // isAway
-                    if (m.getAwayScore() > m.getHomeScore()) ganados++;
-                    else if (m.getAwayScore() < m.getHomeScore()) perdidos++;
+                    if (m.getAwayScore() > m.getHomeScore())
+                        ganados++;
+                    else if (m.getAwayScore() < m.getHomeScore())
+                        perdidos++;
                 }
             }
 
@@ -1428,6 +1437,35 @@ public class TournamentService {
             map.put("teamLogo", r.getTeam().getLogoUrl());
             map.put("status", r.getStatus());
             map.put("requestDate", r.getRequestDate());
+            return map;
+        }).collect(Collectors.toList());
+    }
+
+    public List<Map<String, Object>> getAllPendingJoinRequests(String requesterEmail) throws Exception {
+        User requester = userRepository.findByEmail(requesterEmail)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado."));
+
+        String roleName = requester.getRole() != null ? requester.getRole().getName() : null;
+        boolean isOrganizerOrAdmin = AppConstants.ROLE_ORGANIZADOR.equals(roleName) ||
+                AppConstants.ROLE_ADMINISTRADOR.equals(roleName);
+        if (!isOrganizerOrAdmin) {
+            throw new RuntimeException("No autorizado. Rol inválido.");
+        }
+
+        List<mx.edu.utez.ligamerbackend.models.TournamentJoinRequest> requests = tournamentJoinRequestRepository
+                .findByTournament_CreatedBy_EmailAndStatus(requesterEmail, "PENDING");
+
+        return requests.stream().map(r -> {
+            Map<String, Object> map = new java.util.HashMap<>();
+            map.put("id", r.getId());
+            map.put("teamId", r.getTeam().getId());
+            map.put("teamName", r.getTeam().getName());
+            map.put("teamLogo", r.getTeam().getLogoUrl());
+            map.put("status", r.getStatus());
+            map.put("requestDate", r.getRequestDate());
+            // Add tournament info since we are returning requests from multiple tournaments
+            map.put("tournamentId", r.getTournament().getId());
+            map.put("tournamentName", r.getTournament().getName());
             return map;
         }).collect(Collectors.toList());
     }

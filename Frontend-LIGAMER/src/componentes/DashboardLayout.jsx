@@ -9,12 +9,12 @@ export default function DashboardLayout({ title, children }) {
   const menuItems = [
     { id: 1, ruta: 'admin', label: 'Asignar Organizador', icon: 'bi-person-fill-up' },
   ];
-   const encabezados = [
-    { key: "nombre",         label: "Nombre" },
-    { key: "email",    label: "Correo" },
-    { key: "role",       label: "Rol" },
+  const encabezados = [
+    { key: "nombre", label: "Nombre" },
+    { key: "email", label: "Correo" },
+    { key: "role", label: "Rol" },
     { key: "teamName", label: "Equipo" },
-    { key: "Acciones",       label: "Acciones" }
+    { key: "Acciones", label: "Acciones" }
   ];
   const datos = [
     { id: 1, imagen: "https://i.pravatar.cc/80?img=1", nombre: "Juan", correo: "juan@x.com", rol: "Admin", estado: "Activo", fecha: "2025-10-26" },
@@ -28,18 +28,22 @@ export default function DashboardLayout({ title, children }) {
     { id: 9, imagen: "https://i.pravatar.cc/80?img=1", nombre: "Tomas", correo: "juan@x.com", rol: "Admin", estado: "Activo", fecha: "2025-10-26" },
     { id: 10, imagen: "https://i.pravatar.cc/80?img=1", nombre: "Juan", correo: "juan@x.com", rol: "Admin", estado: "Activo", fecha: "2025-10-26" },
     { id: 11, imagen: "https://i.pravatar.cc/80?img=1", nombre: "Juan", correo: "juan@x.com", rol: "Admin", estado: "Activo", fecha: "2025-10-26" },
-    
+
 
   ];
   const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchUsers() {
+      setLoading(true);
       try {
         const usersData = await getAllUsers();
         setUsers(usersData);
       } catch (error) {
         console.error("Error fetching users:", error);
+      } finally {
+        setLoading(false);
       }
     }
 
@@ -51,7 +55,7 @@ export default function DashboardLayout({ title, children }) {
   }, [users]);
 
   const acciones = [
-    { accion: "Asignar", icon: "bi-person-plus-fill"},
+    { accion: "Asignar", icon: "bi-person-plus-fill" },
     { accion: "Detalles", icon: "bi-eye-fill" },
   ];
   return (
@@ -65,6 +69,7 @@ export default function DashboardLayout({ title, children }) {
               encabezados={encabezados}
               datos={users}
               acciones={acciones}
+              loading={loading}
             />
           </div>
         </div>

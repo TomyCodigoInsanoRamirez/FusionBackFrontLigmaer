@@ -261,6 +261,19 @@ public class TournamentController {
 
     // --- Join Requests Endpoints ---
 
+    @GetMapping("/all-pending-join-requests")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZADOR', 'ROLE_ADMINISTRADOR')")
+    public ResponseEntity<?> getAllPendingJoinRequests() {
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            String email = auth.getName();
+            List<java.util.Map<String, Object>> requests = tournamentService.getAllPendingJoinRequests(email);
+            return ResponseEntity.ok(ApiResponseDto.success("Todas las solicitudes pendientes obtenidas", requests));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponseDto.error(e.getMessage()));
+        }
+    }
+
     @PostMapping("/{tournamentId}/join-requests")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> createJoinRequest(@PathVariable Long tournamentId,

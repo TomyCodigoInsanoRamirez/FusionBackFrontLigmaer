@@ -11,4 +11,6 @@ public interface TournamentJoinRequestRepository extends JpaRepository<Tournamen
     Optional<TournamentJoinRequest> findByTournamentIdAndTeamId(Long tournamentId, Long teamId);
 
     List<TournamentJoinRequest> findByTeamId(Long teamId);
+
+    List<TournamentJoinRequest> findByTournament_CreatedBy_EmailAndStatus(String email, String status);
 }

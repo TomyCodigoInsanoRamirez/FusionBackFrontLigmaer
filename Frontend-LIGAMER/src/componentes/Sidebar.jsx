@@ -36,7 +36,7 @@
 //           </ul>
 
 //           <div className="d-flex align-items-center">
-            {/* <span className="navbar-text me-3" style={{ color: '#fff' }}>
+{/* <span className="navbar-text me-3" style={{ color: '#fff' }}>
               {user ? `Usuario: ${user.username || user?.username || ''}` : ''}
             </span> */}
 //             <Link to="/perfil" className="btn btn-outline-light btn-sm" style={{margin:5}}>
@@ -55,8 +55,10 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { requestToTeams, manageJoinRequest } from '../utils/Service/usuario';
-import { getAllMyTournaments, getTournamentJoinRequests, respondTournamentJoinRequest, searchUserByEmail } from '../utils/Service/General';
+import { getAllMyTournaments, getTournamentJoinRequests, getAllPendingJoinRequests, respondTournamentJoinRequest, searchUserByEmail } from '../utils/Service/General';
 import Swal from 'sweetalert2';
+
+
 
 export default function Sidebar({ menuItems = [] }) {
   const { user, logout } = useAuth();
@@ -66,6 +68,7 @@ export default function Sidebar({ menuItems = [] }) {
   const [torneoNotificaciones, setTorneoNotificaciones] = useState([]); // solicitudes a torneos
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [logoutLoading, setLogoutLoading] = useState(false);
   const [username, setUsername] = useState('');
 
   const getCorreoFromToken = () => {
@@ -109,11 +112,11 @@ export default function Sidebar({ menuItems = [] }) {
 
   const loadJoinRequests = async () => {
     if (!user?.teamId) return;
-    
+
     try {
       const requests = await requestToTeams(user.teamId);
       console.log('Solicitudes obtenidas:', requests);
-      
+
       const pendingRequests = requests.filter(request => request.status === 'PENDING');
       const infoRequests = requests.filter(request => request.status === 'LEFT_INFO');
       setNotificaciones(pendingRequests);
@@ -125,11 +128,11 @@ export default function Sidebar({ menuItems = [] }) {
 
   const handleAceptar = async (requestId) => {
     if (!user?.teamId) return;
-    
+
     setLoading(true);
     try {
       await manageJoinRequest(user.teamId, requestId, 'ACCEPT');
-      
+
       Swal.fire({
         icon: 'success',
         title: 'Solicitud aceptada',
@@ -154,11 +157,11 @@ export default function Sidebar({ menuItems = [] }) {
 
   const handleRechazar = async (requestId) => {
     if (!user?.teamId) return;
-    
+
     setLoading(true);
     try {
       await manageJoinRequest(user.teamId, requestId, 'REJECT');
-      
+
       Swal.fire({
         icon: 'info',
         title: 'Solicitud rechazada',
@@ -184,24 +187,11 @@ export default function Sidebar({ menuItems = [] }) {
   // Solicitudes de torneos (organizador/admin)
   const loadTournamentRequests = async () => {
     try {
-      const myTournamentsResp = await getAllMyTournaments();
-      const myTournaments = myTournamentsResp.data || [];
-      const pending = [];
-
-      for (const t of myTournaments) {
-        try {
-          const resp = await getTournamentJoinRequests(t.id);
-          const list = resp.data || [];
-          list
-            .filter(r => r.status === 'PENDING')
-            .forEach(r => pending.push({ ...r, tournamentId: t.id, tournamentName: t.tournamentName || t.name }));
-        } catch (err) {
-          console.error('No se pudieron obtener solicitudes del torneo', t.id, err);
-        }
-      }
-      setTorneoNotificaciones(pending);
+      const resp = await getAllPendingJoinRequests();
+      const requests = resp.data || [];
+      setTorneoNotificaciones(requests);
     } catch (error) {
-      console.error('Error cargando mis torneos o solicitudes:', error);
+      console.error('Error cargando solicitudes de torneos:', error);
     }
   };
 
@@ -256,18 +246,13 @@ export default function Sidebar({ menuItems = [] }) {
   };
 
   const handleLogout = () => {
-    Swal.fire({
-      icon: 'info',
-      title: 'Tu sesión ha finalizado',
-      text: 'Por favor vuelve a iniciar sesión',
-      confirmButtonText: 'Aceptar',
-      confirmButtonColor: '#4A3287',
-      allowOutsideClick: false,
-      allowEscapeKey: false
-    }).then(() => {
+    setLogoutLoading(true);
+    // Simular un pequeño tiempo o simplemente ejecutar
+    setTimeout(() => {
       logout();
       navigate('/login');
-    });
+      setLogoutLoading(false);
+    }, 500); // Pequeño delay visual de 0.5s para que se note la acción
   };
 
   const unreadCount = notificaciones.length + torneoNotificaciones.length + infoNotificaciones.length;
@@ -330,8 +315,18 @@ export default function Sidebar({ menuItems = [] }) {
                 </button>
               </div>
 
-              <button className="btn btn-outline-light btn-sm" onClick={handleLogout}>
-                Cerrar sesión
+              <button
+                className="btn btn-outline-light btn-sm"
+                onClick={handleLogout}
+                disabled={logoutLoading}
+              >
+                {logoutLoading ? (
+                  <div className="spinner-border spinner-border-sm text-light" role="status">
+                    <span className="visually-hidden">Cargando...</span>
+                  </div>
+                ) : (
+                  'Cerrar sesión'
+                )}
               </button>
             </div>
           </div>
@@ -434,9 +429,9 @@ export default function Sidebar({ menuItems = [] }) {
                       <div key={`tournament-${notif.id}`} className="card mb-3">
                         <div className="card-body d-flex justify-content-between align-items-center">
                           <div>
-                            <strong>{notif.team?.name || notif.user?.email || 'Equipo'}</strong> solicita unirse a <strong>{notif.tournamentName || 'tu torneo'}</strong>
+                            <strong>{notif.teamName || notif.team?.name || 'Equipo'}</strong> solicita unirse a <strong>{notif.tournamentName || 'tu torneo'}</strong>
                             <div className="text-muted small">
-                              Solicitado el: {notif.createdAt ? new Date(notif.createdAt).toLocaleDateString() : ''}
+                              Solicitado el: {notif.requestDate ? new Date(notif.requestDate).toLocaleDateString() : ''}
                             </div>
                           </div>
                           <div>

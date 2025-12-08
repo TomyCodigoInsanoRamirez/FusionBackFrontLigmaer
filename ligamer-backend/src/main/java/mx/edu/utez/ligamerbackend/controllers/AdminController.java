@@ -33,6 +33,7 @@ public class AdminController {
         User requester = userService.findByEmail(email);
         return requester.getRole() != null && AppConstants.ROLE_ADMINISTRADOR.equals(requester.getRole().getName());
     }
+
     @GetMapping
     public ResponseEntity<?> listUsers() {
         try {
@@ -42,7 +43,7 @@ public class AdminController {
              */
 
             List<User> users = userService.listAllUsers();
-            List<mx.edu.utez.ligamerbackend.models.Team> allTeams = teamRepository.findAll();
+            List<mx.edu.utez.ligamerbackend.models.Team> allTeams = teamRepository.findAllWithMembers();
             Map<Long, mx.edu.utez.ligamerbackend.models.Team> userTeamMap = new HashMap<>();
 
             for (mx.edu.utez.ligamerbackend.models.Team t : allTeams) {
@@ -119,15 +120,8 @@ public class AdminController {
         m.put("active", user.isActive());
         m.put("role", user.getRole() != null ? user.getRole().getName() : null);
 
-        // Buscar equipo del usuario
-        List<mx.edu.utez.ligamerbackend.models.Team> allTeams = teamRepository.findAll();
-        mx.edu.utez.ligamerbackend.models.Team userTeam = null;
-        for (mx.edu.utez.ligamerbackend.models.Team t : allTeams) {
-            if (t.getMembers() != null && t.getMembers().stream().anyMatch(u -> u.getId().equals(user.getId()))) {
-                userTeam = t;
-                break;
-            }
-        }
+        // Buscar equipo del usuario de manera eficiente
+        mx.edu.utez.ligamerbackend.models.Team userTeam = teamRepository.findByMembersContaining(user).orElse(null);
 
         if (userTeam != null) {
             m.put("teamId", userTeam.getId());
