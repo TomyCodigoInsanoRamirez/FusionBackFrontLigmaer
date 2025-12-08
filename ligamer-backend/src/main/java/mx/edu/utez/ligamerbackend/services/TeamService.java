@@ -68,7 +68,7 @@ public class TeamService {
 
     @Transactional(readOnly = true)
     public List<Team> listTeams() {
-        return teamRepository.findAll();
+        return teamRepository.findAllWithMembers();
     }
 
     @Transactional(readOnly = true)
@@ -176,9 +176,9 @@ public class TeamService {
 
         if (!jr.getTeam().getId().equals(team.getId()))
             throw new Exception("Solicitud no pertenece a este equipo.");
-        
-                if (!AppConstants.JOIN_REQUEST_PENDING.equalsIgnoreCase(jr.getStatus()))
-                    throw new Exception("Esta solicitud es informativa y no requiere acción.");
+
+        if (!AppConstants.JOIN_REQUEST_PENDING.equalsIgnoreCase(jr.getStatus()))
+            throw new Exception("Esta solicitud es informativa y no requiere acción.");
 
         if ("accept".equalsIgnoreCase(action)) {
             User user = jr.getUser();
@@ -242,7 +242,8 @@ public class TeamService {
         team.setMembers(members);
         teamRepository.save(team);
 
-        // Crear notificación informativa para el dueño (se reutiliza join_requests como bandeja)
+        // Crear notificación informativa para el dueño (se reutiliza join_requests como
+        // bandeja)
         JoinRequest info = new JoinRequest();
         info.setTeam(team);
         info.setUser(user);

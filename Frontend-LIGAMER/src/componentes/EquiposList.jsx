@@ -1,16 +1,15 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import './DashboardLayout.css';
 import Sidebar from "./Sidebar";
 import TablaCard from "./TablaCard";
 import { getAllTeams } from "../utils/Service/usuario";
-import { useState, useEffect } from "react";
 import { Modal, Button, Form } from "react-bootstrap";
 import Swal from "sweetalert2";
 import { createTeam, getProfile } from "../utils/Service/General";
-import { text } from "d3";
 
 export default function EquiposList() {
   const [teams, setTeams] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
     nombre: "",
@@ -23,10 +22,6 @@ export default function EquiposList() {
     setFormData({ nombre: "", descripcion: "" });
   };
 
-  // const handleInputChange = (e) => {
-  //   const { name, value } = e.target;
-  //   setFormData(prev => ({ ...prev, [name]: value }));
-  // };
   const handleInputChange = (e) => {
     const { name, files, value } = e.target;
 
@@ -37,84 +32,86 @@ export default function EquiposList() {
   };
 
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  if (!formData.nombre.trim()) {
-    Swal.fire({
-      icon: 'error',
-      title: 'Campo requerido',
-      text: 'El nombre del equipo es obligatorio',
-      confirmButtonColor: '#4A3287'
-    });
-    return;
-  }
-
-  try {
-    const profile = await getProfile();
-    if (profile?.ownedTeam) {
+    if (!formData.nombre.trim()) {
       Swal.fire({
-        icon: 'warning',
-        title: 'Ya administras un equipo',
-        text: 'No puedes crear más de un equipo como dueño.',
+        icon: 'error',
+        title: 'Campo requerido',
+        text: 'El nombre del equipo es obligatorio',
         confirmButtonColor: '#4A3287'
       });
       return;
     }
 
-    const payload = new FormData();
-    payload.append('name', formData.nombre.trim());
-    payload.append('description', formData.descripcion || '');
+    try {
+      const profile = await getProfile();
+      if (profile?.ownedTeam) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Ya administras un equipo',
+          text: 'No puedes crear más de un equipo como dueño.',
+          confirmButtonColor: '#4A3287'
+        });
+        return;
+      }
 
-    // Adjuntar archivo si el usuario lo eligió
-    if (formData.logo) {
-      payload.append('image', formData.logo);
-    } else {
-      // Logo generado por defecto si no se sube archivo
-      payload.append('logoUrl', "https://ui-avatars.com/api/?background=random&name=" + encodeURIComponent(formData.nombre));
+      const payload = new FormData();
+      payload.append('name', formData.nombre.trim());
+      payload.append('description', formData.descripcion || '');
+
+      // Adjuntar archivo si el usuario lo eligió
+      if (formData.logo) {
+        payload.append('image', formData.logo);
+      } else {
+        // Logo generado por defecto si no se sube archivo
+        payload.append('logoUrl', "https://ui-avatars.com/api/?background=random&name=" + encodeURIComponent(formData.nombre));
+      }
+
+      const newTeam = await createTeam(payload);
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Equipo creado',
+        text: 'Equipo creado, solo puedes crear un equipo.',
+        confirmButtonColor: '#4A3287',
+        position: 'top'
+      });
+
+      handleCloseModal();
+
+      const updatedTeams = await getAllTeams();
+      setTeams(updatedTeams);
+
+    } catch (error) {
+      console.log("ERROR COMPLETO:", error);
+      console.log("ERROR BACKEND:", error.response?.data);
+
+      // El backend devuelve el mensaje de error directamente como string
+      const errorMessage = typeof error.response?.data === 'string'
+        ? error.response.data
+        : error.response?.data?.message || "Error al crear el equipo";
+
+      Swal.fire({
+        icon: "error",
+        title: "Error al crear el equipo",
+        text: errorMessage,
+        confirmButtonColor: "#4A3287"
+      });
     }
-
-    const newTeam = await createTeam(payload);
-
-    Swal.fire({
-      icon: 'success',
-      title: 'Equipo creado',
-      text: 'Equipo creado, solo puedes crear un equipo.',
-      confirmButtonColor: '#4A3287',
-      position: 'top'
-    });
-
-    handleCloseModal();
-
-    const updatedTeams = await getAllTeams();
-    setTeams(updatedTeams);
-
-  } catch (error) {
-    console.log("ERROR COMPLETO:", error);
-    console.log("ERROR BACKEND:", error.response?.data);
-
-    // El backend devuelve el mensaje de error directamente como string
-    const errorMessage = typeof error.response?.data === 'string' 
-      ? error.response.data 
-      : error.response?.data?.message || "Error al crear el equipo";
-
-    Swal.fire({
-      icon: "error",
-      title: "Error al crear el equipo",
-      text: errorMessage,
-      confirmButtonColor: "#4A3287"
-    });
-  }
-};
+  };
 
 
-  useEffect(() => { 
+  useEffect(() => {
+    setLoading(true);
     getAllTeams()
       .then((data) => {
         setTeams(data);
         console.log("Data equipos: " + data);
       })
-      .catch((err) => console.log(err));
+      .catch((err) => console.log(err))
+      .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
@@ -123,17 +120,17 @@ const handleSubmit = async (e) => {
 
   const menuItems = [
     { id: 1, ruta: 'user', label: 'Jugadores', icon: 'bi-person-lines-fill' },
-    { id: 2, ruta: 'equipos', label: 'Equipos', icon : 'bi-people-fill' },
+    { id: 2, ruta: 'equipos', label: 'Equipos', icon: 'bi-people-fill' },
     { id: 3, ruta: 'jugadoresUser', label: 'Mi equipo', icon: 'bi-person-fill-gear' },
     { id: 4, ruta: 'miEquipo', label: 'Resultados de mi equipo', icon: 'bi-bar-chart-fill' },
     { id: 5, ruta: 'torneosDisponibles', label: 'Torneos', icon: 'bi-trophy-fill' },
   ];
 
   const encabezados = [
-    {key:"name", label:"Nombre"}, 
-    {key:"members",label:"Miembros"}, 
-    {key:"description",label:"Descripción"}, 
-    {key:"Acciones",label:"Acciones"}
+    { key: "name", label: "Nombre" },
+    { key: "members", label: "Miembros" },
+    { key: "description", label: "Descripción" },
+    { key: "Acciones", label: "Acciones" }
   ];
   const datos = [
     { id: 1, nombre: "Los Rayos FC", miembros: 12, descripcion: "Equipo corporativo - turno mañana" },
@@ -145,7 +142,7 @@ const handleSubmit = async (e) => {
 
   const acciones = [
     { accion: "Detalles", icon: "bi-eye-fill" },
-    { accion: "Unirse", icon: "bi-person-fill-add" }, 
+    { accion: "Unirse", icon: "bi-person-fill-add" },
   ];
 
   return (
@@ -158,11 +155,12 @@ const handleSubmit = async (e) => {
               encabezados={encabezados}
               datos={teams}
               acciones={acciones}
+              loading={loading}
               actionButton={
-                <button 
+                <button
                   className="btn btn-primary"
-                  style={{ 
-                    backgroundColor: '#4A3287', 
+                  style={{
+                    backgroundColor: '#4A3287',
                     borderColor: '#4A3287',
                     fontWeight: 'bold',
                     whiteSpace: 'nowrap'
@@ -223,8 +221,8 @@ const handleSubmit = async (e) => {
           <Button variant="secondary" onClick={handleCloseModal}>
             Cancelar
           </Button>
-          <Button 
-            variant="primary" 
+          <Button
+            variant="primary"
             onClick={handleSubmit}
             style={{ backgroundColor: '#4A3287', borderColor: '#4A3287' }}
           >

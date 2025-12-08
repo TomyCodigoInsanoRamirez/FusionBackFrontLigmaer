@@ -1,8 +1,7 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import './DashboardLayout.css';
 import Sidebar from "./Sidebar";
 import TablaCard from "./TablaCard";
-import { useState, useEffect } from "react";
 import { getTeamMembers, leaveTeam } from "../utils/Service/usuario";
 import { getProfile } from "../utils/Service/General";
 import { useAuth } from "../context/AuthContext";
@@ -10,6 +9,7 @@ import Swal from "sweetalert2";
 
 export default function JugadoresList() {
   const [teamMembers, setTeamMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
   const handleLeaveTeam = async () => {
@@ -76,8 +76,8 @@ export default function JugadoresList() {
         console.log("ERROR COMPLETO:", error);
         console.log("ERROR BACKEND:", error.response?.data);
 
-        const errorMessage = typeof error.response?.data === 'string' 
-          ? error.response.data 
+        const errorMessage = typeof error.response?.data === 'string'
+          ? error.response.data
           : error.response?.data?.message || "Error al salir del equipo";
 
         const lowerMsg = (errorMessage || '').toLowerCase();
@@ -100,20 +100,20 @@ export default function JugadoresList() {
       }
     }
   };
-  
+
   const menuItems = [
     { id: 1, ruta: 'user', label: 'Jugadores', icon: 'bi-person-lines-fill' },
-    { id: 2, ruta: 'equipos', label: 'Equipos', icon : 'bi-people-fill' },
+    { id: 2, ruta: 'equipos', label: 'Equipos', icon: 'bi-people-fill' },
     { id: 3, ruta: 'jugadoresUser', label: 'Mi equipo', icon: 'bi-person-fill-gear' },
     { id: 4, ruta: 'miEquipo', label: 'Resultados de mi equipo', icon: 'bi-bar-chart-fill' },
     { id: 5, ruta: 'torneosDisponibles', label: 'Torneos', icon: 'bi-trophy-fill' },
   ];
-   const encabezados = [
+  const encabezados = [
     { key: "nombreCompleto", label: "Nombre" },
-    { key: "username",       label: "Usuario" },
-    { key: "victorias",      label: "Victorias" },
-    { key: "derrotas",       label: "Derrotas" },
-    { key: "Acciones",       label: "Acciones" }
+    { key: "username", label: "Usuario" },
+    { key: "victorias", label: "Victorias" },
+    { key: "derrotas", label: "Derrotas" },
+    { key: "Acciones", label: "Acciones" }
   ];
 
   const datos = [
@@ -130,15 +130,17 @@ export default function JugadoresList() {
     { accion: "Detalles", icon: "bi-eye-fill" },
     // { accion: "Retar", icon: "bi-send-fill" },
   ];
-  
+
 
   useEffect(() => {
     // Usar el teamId del usuario logueado desde el AuthContext
     if (!user?.teamId) {
       console.log("El usuario no pertenece a ningún equipo");
+      setLoading(false);
       return;
     }
 
+    setLoading(true);
     getTeamMembers(user.teamId)
       .then((data) => {
         const normalized = (data || []).map((member) => {
@@ -156,7 +158,8 @@ export default function JugadoresList() {
         setTeamMembers(normalized);
         console.log("Miembros del equipo:", normalized);
       })
-      .catch((err) => console.error("Error obteniendo miembros:", err));
+      .catch((err) => console.error("Error obteniendo miembros:", err))
+      .finally(() => setLoading(false));
   }, [user]);
 
   useEffect(() => {
@@ -173,11 +176,12 @@ export default function JugadoresList() {
               encabezados={encabezados}
               datos={teamMembers}
               acciones={acciones}
+              loading={loading}
               actionButton={
                 user?.teamId && (
-                  <button 
+                  <button
                     className="btn btn-danger"
-                    style={{ 
+                    style={{
                       fontWeight: 'bold',
                       whiteSpace: 'nowrap'
                     }}

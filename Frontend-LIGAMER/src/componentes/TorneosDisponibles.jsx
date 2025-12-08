@@ -23,9 +23,9 @@ export default function TorneosDisponibles({ title, children }) {
       return null;
     }
   };
-    const menuItems = [
+  const menuItems = [
     { id: 1, ruta: 'user', label: 'Jugadores', icon: 'bi-person-lines-fill' },
-    { id: 2, ruta: 'equipos', label: 'Equipos', icon : 'bi-people-fill' },
+    { id: 2, ruta: 'equipos', label: 'Equipos', icon: 'bi-people-fill' },
     { id: 3, ruta: 'jugadoresUser', label: 'Mi equipo', icon: 'bi-person-fill-gear' },
     { id: 4, ruta: 'miEquipo', label: 'Resultados de mi equipo', icon: 'bi-bar-chart-fill' },
     { id: 5, ruta: 'torneosDisponibles', label: 'Torneos', icon: 'bi-trophy-fill' },
@@ -33,18 +33,19 @@ export default function TorneosDisponibles({ title, children }) {
 
   //const encabezados = [ "Nombre", "Organizador", "Equipos", "Acciones"];
   const encabezados = [
-    { key: "name",        label: "Nombre" },
-    { key: "organizador",   label: "Organizador" }, 
-    { key: "teamCount",       label: "Equipos" },
-    { key: "Acciones",      label: "Acciones" }
+    { key: "name", label: "Nombre" },
+    { key: "organizador", label: "Organizador" },
+    { key: "teamCount", label: "Equipos" },
+    { key: "Acciones", label: "Acciones" }
   ];
 
   const acciones = [
     { accion: "Detalles", icon: "bi-eye-fill" },
-    { accion: "Participar", icon: "bi-person-fill-add" },	
+    { accion: "Participar", icon: "bi-person-fill-add" },
   ];
 
-  const [tournament,setTournaments] = useState([]);
+  const [tournament, setTournaments] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const MySwal = withReactContent(Swal);
   const handleUnirse = (torneo) => {
@@ -69,8 +70,8 @@ export default function TorneosDisponibles({ title, children }) {
         const isOwner = payload?.isOwner ?? payload?.data?.isOwner;
         const ownedTeamIdApi = payload?.ownedTeam?.id || payload?.data?.ownedTeam?.id;
         const ownedTeamId = ownedTeamIdApi || user?.ownedTeam?.id || user?.teamId;
-        console.log("DATA PAYOAD: "+JSON.stringify(payload))
-        console.log("DATA PAYOAD sin parseo: "+payload)
+        console.log("DATA PAYOAD: " + JSON.stringify(payload))
+        console.log("DATA PAYOAD sin parseo: " + payload)
         if (!isOwner || !ownedTeamId) {
           MySwal.fire({
             icon: 'warning',
@@ -137,8 +138,9 @@ export default function TorneosDisponibles({ title, children }) {
   };
 
   useEffect(() => {
+    setLoading(true);
     getAllTournaments()
-      .then((data) => { 
+      .then((data) => {
         const list = data.data || [];
         const normalizados = list.map(t => ({
           id: t.id,
@@ -151,12 +153,13 @@ export default function TorneosDisponibles({ title, children }) {
         }));
         setTournaments(normalizados);
       })
-      .catch((err) => console.log(err));
+      .catch((err) => console.log(err))
+      .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
     console.log("Estado tournaments actualizado desde la otra pantalla:", tournament);
-  }, [tournament]); 
+  }, [tournament]);
   return (
     <div className="dashboard-layout">
       <Sidebar menuItems={menuItems} />
@@ -168,6 +171,7 @@ export default function TorneosDisponibles({ title, children }) {
               datos={tournament}
               acciones={acciones}
               onUnirse={handleUnirse}
+              loading={loading}
             />
           </div>
         </div>

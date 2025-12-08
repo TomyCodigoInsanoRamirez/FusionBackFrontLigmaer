@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import "./TablaCard.css";
-import { Modal, Button } from "react-bootstrap";
+import { Modal, Button, OverlayTrigger, Tooltip } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
@@ -269,82 +269,37 @@ export default function TablaCard({ encabezados = [], datos = [], acciones = [],
 
   const renderAcciones = (fila) => {
     return acciones.map((a, index) => {
-      if (a.accion === "Asignar") {
-        return (
-          <button
-            key={index}
-            className="btn-accion me-1"
-            onClick={(e) => handleAccionClick(a, fila, e)}
-          >
-            <i className={a.icon}></i>
-          </button>
-        );
-      }
+      let title = "Acción";
+      let onClick = (e) => handleAccionClick(a, fila, e);
 
+      // Personalizar título y onClick según acción
+      if (a.accion === "Asignar") title = "Asignar organizador";
       if (a.accion === "Detalles") {
-        return (
+        title = "Ver detalles";
+        onClick = (e) => {
+          e.stopPropagation();
+          abrirModal(fila);
+        };
+      }
+      if (a.accion === "Ver") title = "Ver más";
+      if (a.accion === "Retar") title = "Enviar reto";
+      if (a.accion === "Unirse") title = "Unirse al equipo";
+      if (a.accion === "Participar") title = "Participar en torneo";
+
+      return (
+        <OverlayTrigger
+          key={index}
+          placement="top"
+          overlay={<Tooltip id={`tooltip-${index}-${fila.id}`}>{title}</Tooltip>}
+        >
           <button
-            key={index}
             className="btn-accion me-1"
-            onClick={(e) => {
-              e.stopPropagation();
-              abrirModal(fila);
-            }}
+            onClick={onClick}
           >
             <i className={a.icon}></i>
           </button>
-        );
-      }
-
-      if (a.accion === "Ver") {
-        return (
-          <button
-            key={index}
-            className="btn-accion me-1"
-            onClick={(e) => handleAccionClick(a, fila, e)}
-          >
-            <i className={a.icon}></i>
-          </button>
-        );
-      }
-
-      if (a.accion === "Retar") {
-        return (
-          <button
-            key={index}
-            className="btn-accion me-1"
-            onClick={(e) => handleAccionClick(a, fila, e)}
-          >
-            <i className={a.icon}></i>
-          </button>
-        );
-      }
-
-      if (a.accion === "Unirse") {
-        return (
-          <button
-            key={index}
-            className="btn-accion me-1"
-            onClick={(e) => handleAccionClick(a, fila, e)}
-          >
-            <i className={a.icon}></i>
-          </button>
-        );
-      }
-
-      if (a.accion === "Participar") {
-        return (
-          <button
-            key={index}
-            className="btn-accion me-1"
-            onClick={(e) => handleAccionClick(a, fila, e)}
-          >
-            <i className={a.icon}></i>
-          </button>
-        );
-      }
-
-      return null;
+        </OverlayTrigger>
+      );
     });
   };
 

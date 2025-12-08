@@ -10,7 +10,7 @@ function decodeJWT(token) {
   try {
     const base64Url = token.split('.')[1];
     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function (c) {
       return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
     }).join(''));
     return JSON.parse(jsonPayload);
@@ -27,27 +27,28 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) { setLoading(false); return; }
-    
+
     // Decodificar el token para extraer la información del usuario
     API.setToken(token);
     const payload = decodeJWT(token);
-    
+
     if (payload && payload.sub) {
       // El JWT contiene el email en 'sub' y los roles en 'authorities'
       const email = payload.sub;
       const authorities = payload.authorities || [];
       // Extraer el rol principal (ROLE_USUARIO, ROLE_ORGANIZADOR, ROLE_ADMINISTRADOR)
       const role = authorities[0] || 'ROLE_USUARIO';
-      
+
       // Obtener el perfil completo del usuario (incluyendo teamId)
       getProfile()
         .then((profileResponse) => {
           const profile = profileResponse.data;
           const teamId = profile.team?.id || profile.ownedTeam?.id;
-          setUser({ 
-            email, 
+          setUser({
+            email,
             role,
             id: profile.id,
+            username: profile.username || profile.nombre || email, // Añado username
             nombre: profile.nombre,
             teamId: teamId,
             team: profile.team,
@@ -77,16 +78,16 @@ export function AuthProvider({ children }) {
     // Llamada real al backend
     const res = await API.login(email, password); // { accessToken }
     console.log('Login response:', res);
-    
+
     const token = res.accessToken || res.token || res;
     if (!token) throw new Error('No se recibió token del servidor');
-    
+
     // Decodificar el JWT para obtener la información del usuario
     const payload = decodeJWT(token);
     if (!payload || !payload.sub) {
       throw new Error('Token inválido recibido del servidor');
     }
-    
+
     API.setToken(token);
     localStorage.setItem("token", token);
 
@@ -94,17 +95,18 @@ export function AuthProvider({ children }) {
     const userEmail = payload.sub;
     const authorities = payload.authorities || [];
     const userRole = authorities[0] || 'ROLE_USUARIO';
-    
+
     // Obtener el perfil completo del usuario
     try {
       const profileResponse = await getProfile();
       const profile = profileResponse.data;
       const teamId = profile.team?.id || profile.ownedTeam?.id;
-      
-      const userObj = { 
-        email: userEmail, 
+
+      const userObj = {
+        email: userEmail,
         role: userRole,
         id: profile.id,
+        username: profile.username || profile.nombre || userEmail, // Añado username
         nombre: profile.nombre,
         teamId: teamId,
         team: profile.team,

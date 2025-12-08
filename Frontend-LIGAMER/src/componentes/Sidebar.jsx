@@ -52,7 +52,7 @@
 
 
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { requestToTeams, manageJoinRequest } from '../utils/Service/usuario';
 import { getAllMyTournaments, getTournamentJoinRequests, getAllPendingJoinRequests, respondTournamentJoinRequest, searchUserByEmail } from '../utils/Service/General';
@@ -63,6 +63,8 @@ import Swal from 'sweetalert2';
 export default function Sidebar({ menuItems = [] }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation(); // Hook para obtener la ruta actual
+
   const [notificaciones, setNotificaciones] = useState([]); // solicitudes de equipo
   const [infoNotificaciones, setInfoNotificaciones] = useState([]); // eventos informativos (p.ej. abandono)
   const [torneoNotificaciones, setTorneoNotificaciones] = useState([]); // solicitudes a torneos
@@ -96,19 +98,7 @@ export default function Sidebar({ menuItems = [] }) {
     }
   }, [user]);
 
-  useEffect(() => {
-    const email = getCorreoFromToken();
-    if (!email) return;
-
-    searchUserByEmail(email)
-      .then((data) => {
-        setUsername(data?.username || data?.email || '');
-      })
-      .catch((err) => {
-        console.error('Error obteniendo usuario para sidebar:', err);
-        setUsername('');
-      });
-  }, [user]);
+  // Removed redundant profile fetch - using AuthContext now
 
   const loadJoinRequests = async () => {
     if (!user?.teamId) return;
@@ -279,19 +269,32 @@ export default function Sidebar({ menuItems = [] }) {
 
           <div className="collapse navbar-collapse" id="ligamerNavbar">
             <ul className="navbar-nav me-auto mb-2 mb-lg-0">
-              {menuItems.map(item => (
-                <li className="nav-item" key={item.id}>
-                  <Link className="nav-link" to={`/${item.ruta}`}>
-                    {item.label} <i className={`${item.icon || 'bi-circle-fill'}`} style={{ marginLeft: 6 }}></i>
-                  </Link>
-                </li>
-              ))}
+              {menuItems.map(item => {
+                const isActive = location.pathname.includes(item.ruta);
+                return (
+                  <li className="nav-item" key={item.id}>
+                    <Link
+                      className={`nav-link ${isActive ? 'active' : ''}`}
+                      to={`/${item.ruta}`}
+                      style={{
+                        fontWeight: isActive ? 'bold' : 'normal',
+                        borderBottom: isActive ? '2px solid white' : 'none',
+                        color: isActive ? '#fff' : 'rgba(255,255,255,0.7)',
+                        backgroundColor: isActive ? 'rgba(255,255,255,0.1)' : 'transparent',
+                        borderRadius: '4px'
+                      }}
+                    >
+                      {item.label} <i className={`${item.icon || 'bi-circle-fill'}`} style={{ marginLeft: 6 }}></i>
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
 
             <div className="d-flex align-items-center">
               <Link to="/perfil" className="btn btn-outline-light btn-sm" style={{ margin: 5 }}>
                 <span className="navbar-text me-3" style={{ color: '#fff', display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
-                  <small style={{ fontSize: '0.75rem', opacity: 0.85 }}>{username || 'Cargando...'}</small>
+                  <small style={{ fontSize: '0.75rem', opacity: 0.85 }}>{user?.username || user?.nombre || 'Usuario'}</small>
                   <span style={{ fontWeight: 600 }}>Mi perfil</span>
                 </span>
               </Link>

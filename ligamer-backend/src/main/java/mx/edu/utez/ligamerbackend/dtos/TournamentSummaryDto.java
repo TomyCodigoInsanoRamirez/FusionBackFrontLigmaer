@@ -15,4 +15,5 @@ public class TournamentSummaryDto {
     private LocalDate endDate;
     private String estado;
     private int teamCount;
+    private String organizerName;
 }

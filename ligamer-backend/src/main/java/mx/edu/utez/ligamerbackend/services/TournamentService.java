@@ -774,6 +774,11 @@ public class TournamentService {
             dto.setEndDate(t.getEndDate());
             dto.setEstado(t.getEstado());
             dto.setTeamCount(t.getTeams() != null ? t.getTeams().size() : 0);
+            if (t.getCreatedBy() != null) {
+                dto.setOrganizerName(t.getCreatedBy().getNombre() + " " + t.getCreatedBy().getApellidoPaterno());
+            } else {
+                dto.setOrganizerName("Sistema");
+            }
             return dto;
         }).collect(Collectors.toList());
     }
