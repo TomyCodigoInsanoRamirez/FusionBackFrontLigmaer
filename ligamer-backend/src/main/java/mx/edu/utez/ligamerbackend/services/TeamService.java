@@ -152,7 +152,17 @@ public class TeamService {
         Team team = getTeam(teamId);
         if (!team.getOwner().getEmail().equalsIgnoreCase(requesterEmail))
             throw new Exception("No autorizado.");
-        return joinRequestRepository.findAllByTeamAndStatus(team, AppConstants.JOIN_REQUEST_PENDING);
+
+        // Incluir solicitudes pendientes y avisos informativos de abandono
+        List<JoinRequest> all = joinRequestRepository.findAllByTeam(team);
+        List<String> allowed = Arrays.asList(AppConstants.JOIN_REQUEST_PENDING, AppConstants.JOIN_REQUEST_LEFT_INFO);
+        List<JoinRequest> filtered = new ArrayList<>();
+        for (JoinRequest jr : all) {
+            if (allowed.contains(jr.getStatus())) {
+                filtered.add(jr);
+            }
+        }
+        return filtered;
     }
 
     public JoinRequest manageJoinRequest(Long teamId, Long requestId, String action, String requesterEmail)
