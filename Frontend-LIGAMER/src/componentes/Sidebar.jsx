@@ -369,7 +369,16 @@ export default function Sidebar({ menuItems = [] }) {
                               Fecha: {notif.createdAt ? new Date(notif.createdAt).toLocaleDateString() : ''}
                             </div>
                           </div>
-                          <span className="badge bg-warning text-dark">Aviso</span>
+                          <div className="d-flex align-items-center gap-2">
+                            <span className="badge bg-warning text-dark">Aviso</span>
+                            <button
+                              className="btn btn-sm btn-outline-secondary"
+                              title="Marcar como leído"
+                              onClick={() => setInfoNotificaciones(prev => prev.filter(n => n.id !== notif.id))}
+                            >
+                              <i className="bi bi-x-lg"></i>
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}
