@@ -9,6 +9,7 @@ import { appBarClasses } from '@mui/material';
 
 
 const MySwal = withReactContent(Swal);
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function CrearCuenta() {
   const navigate = useNavigate();
@@ -35,6 +36,10 @@ export default function CrearCuenta() {
     password: '',
     confirm: ''
   });
+
+  const requiredFieldsFilled = form.nombre.trim() && form.apellidoPaterno.trim() && form.apellidoMaterno.trim() && form.email.trim() && form.password && form.confirm;
+  const isEmailValid = EMAIL_REGEX.test(form.email.trim());
+  const isFormValid = Boolean(requiredFieldsFilled && isEmailValid && passwordValidation.isValid && confirmPasswordValidation.matches);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -132,8 +137,7 @@ export default function CrearCuenta() {
     e.preventDefault();
 
     // Validar formato de correo
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(form.email)) {
+    if (!EMAIL_REGEX.test(form.email.trim())) {
       return MySwal.fire({
         icon: 'error',
         title: 'Correo inválido',
@@ -400,7 +404,7 @@ export default function CrearCuenta() {
 
                   <div className="d-flex gap-2 mb-3">
                     <button type="button" className="btn btn-danger flex-fill" onClick={handleCancel}>Cancelar</button>
-                    <button type="submit" className="btn btn-register flex-fill">Registrarse</button>
+                    <button type="submit" className="btn btn-register flex-fill" disabled={!isFormValid}>Registrarse</button>
                   </div>
 
                   <div className="text-center text-light">
