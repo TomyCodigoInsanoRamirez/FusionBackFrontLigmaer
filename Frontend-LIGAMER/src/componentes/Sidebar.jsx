@@ -239,8 +239,9 @@ export default function Sidebar({ menuItems = [] }) {
     setLogoutLoading(true);
     // Simular un pequeño tiempo o simplemente ejecutar
     setTimeout(() => {
+      localStorage.setItem('showLogoutModal', 'true'); // Flag para el modal
       logout();
-      navigate('/login');
+      navigate('/login'); // Redirige explícitamente
       setLogoutLoading(false);
     }, 500); // Pequeño delay visual de 0.5s para que se note la acción
   };

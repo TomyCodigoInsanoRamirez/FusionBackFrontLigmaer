@@ -47,10 +47,13 @@ function RoleRoute({ allowedRoles, children }) {
 
   const backendRole = user?.role;
   const mappedRole = backendRole ? (roleMap[backendRole] || backendRole) : null;
-  console.log('User role:', backendRole, '-> mapped:', mappedRole);
+  console.log('--- Role Check ---');
+  console.log('User Role (Backend):', backendRole);
+  console.log('Mapped Role:', mappedRole);
+  console.log('Allowed Roles:', allowedRoles);
 
   if (!user && location.pathname !== "/login") {
-  return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   // Permitir si allowedRoles contiene el rol mapeado o el rol original (por compatibilidad)
@@ -82,7 +85,7 @@ export default function App() {
     // ... hasta 16, pero puede haber menos
   ];
 
-  
+
   const datosTorneo = {
     tournamentName: "Liga Interempresas 2025",
     numTeams: 16
@@ -125,32 +128,32 @@ export default function App() {
           <Route path="/register" element={<CrearCuenta />} />
           <Route path="/reset-password" element={<ResetPassword />} />
 
-          
-          <Route path="/admin" element={<ProtectedRoute><RoleRoute allowedRoles={['admin']}><AdminDashboard /></RoleRoute></ProtectedRoute>} />
-          <Route path="/user" element={<ProtectedRoute><RoleRoute allowedRoles={['user']}><DashboardJugadoresPage /></RoleRoute></ProtectedRoute>} />
-          <Route path="/jugadoresUser" element={<ProtectedRoute><RoleRoute allowedRoles={['user']}><JugadoresUserPage /></RoleRoute></ProtectedRoute>} />{/* <-- nueva ruta para rol user */}
-          <Route path="/equipos" element={<ProtectedRoute><RoleRoute allowedRoles={['admin','manager','user']}><EquiposPage /></RoleRoute></ProtectedRoute>} />{/* <-- nueva ruta */}
-          <Route path="/manager" element={<ProtectedRoute><RoleRoute allowedRoles={['manager']}><ManagerDashboard /></RoleRoute></ProtectedRoute>} />
-          <Route path="/torneos" element={<ProtectedRoute><RoleRoute allowedRoles={['manager']}><ManagerDashboard /></RoleRoute></ProtectedRoute>} />
-          {/* <Route path="/user" element={<ProtectedRoute><RoleRoute allowedRoles={['user']}><UserDashboard /></RoleRoute></ProtectedRoute>} /> */}
-          <Route path="/torneosDisponibles" element={<ProtectedRoute><RoleRoute allowedRoles={['user',]}><TorneosDisponibless /></RoleRoute></ProtectedRoute>} />
-          <Route path="/perfil" element={<ProtectedRoute><RoleRoute allowedRoles={['user','admin','manager']}><Perfil userData={userData} onUpdate={handleUpdate}/></RoleRoute></ProtectedRoute>} />
 
-          <Route path="/elegir-equipo" element={<ProtectedRoute><RoleRoute allowedRoles={['user',]}><UserDashboard /></RoleRoute></ProtectedRoute>} />
-          <Route path="/miEquipo" element={<ProtectedRoute><RoleRoute allowedRoles={['user']}><DashboardLayoutUserGraficas /></RoleRoute></ProtectedRoute>} />
+          <Route path="/admin" element={<ProtectedRoute><RoleRoute allowedRoles={['admin', 'ROLE_ADMINISTRADOR']}><AdminDashboard /></RoleRoute></ProtectedRoute>} />
+          <Route path="/user" element={<ProtectedRoute><RoleRoute allowedRoles={['user', 'ROLE_JUGADOR']}><DashboardJugadoresPage /></RoleRoute></ProtectedRoute>} />
+          <Route path="/jugadoresUser" element={<ProtectedRoute><RoleRoute allowedRoles={['user', 'ROLE_JUGADOR']}><JugadoresUserPage /></RoleRoute></ProtectedRoute>} />{/* <-- nueva ruta para rol user */}
+          <Route path="/equipos" element={<ProtectedRoute><RoleRoute allowedRoles={['admin', 'ROLE_ADMINISTRADOR', 'manager', 'ROLE_ORGANIZADOR', 'user', 'ROLE_JUGADOR']}><EquiposPage /></RoleRoute></ProtectedRoute>} />{/* <-- nueva ruta */}
+          <Route path="/manager" element={<ProtectedRoute><RoleRoute allowedRoles={['manager', 'ROLE_ORGANIZADOR']}><ManagerDashboard /></RoleRoute></ProtectedRoute>} />
+          <Route path="/torneos" element={<ProtectedRoute><RoleRoute allowedRoles={['manager', 'ROLE_ORGANIZADOR']}><ManagerDashboard /></RoleRoute></ProtectedRoute>} />
+          {/* <Route path="/user" element={<ProtectedRoute><RoleRoute allowedRoles={['user']}><UserDashboard /></RoleRoute></ProtectedRoute>} /> */}
+          <Route path="/torneosDisponibles" element={<ProtectedRoute><RoleRoute allowedRoles={['user', 'ROLE_JUGADOR']}><TorneosDisponibless /></RoleRoute></ProtectedRoute>} />
+          <Route path="/perfil" element={<ProtectedRoute><RoleRoute allowedRoles={['user', 'ROLE_JUGADOR', 'admin', 'ROLE_ADMINISTRADOR', 'manager', 'ROLE_ORGANIZADOR']}><Perfil userData={userData} onUpdate={handleUpdate} /></RoleRoute></ProtectedRoute>} />
+
+          <Route path="/elegir-equipo" element={<ProtectedRoute><RoleRoute allowedRoles={['user', 'ROLE_JUGADOR']}><UserDashboard /></RoleRoute></ProtectedRoute>} />
+          <Route path="/miEquipo" element={<ProtectedRoute><RoleRoute allowedRoles={['user', 'ROLE_JUGADOR']}><DashboardLayoutUserGraficas /></RoleRoute></ProtectedRoute>} />
           {/* <Route path="/crearTorneo" element={<ProtectedRoute><RoleRoute allowedRoles={['manager']}><CrearTorneo estado="Nuevo"/></RoleRoute></ProtectedRoute>} />
           <Route path="/TorneoEnCurso/:id" element={<ProtectedRoute><RoleRoute allowedRoles={['manager']}><CrearTorneo estado="En curso" datosGuardados={datosTorneo} equipos={equiposInscritos} /></RoleRoute></ProtectedRoute>} />
           <Route path="/TorneoGuardado/:id" element={<ProtectedRoute><RoleRoute allowedRoles={['manager']}><CrearTorneo estado="Guardado"datosGuardados={datosTorneo} /></RoleRoute></ProtectedRoute>} /> */}
-          <Route path="/crearTorneo" element={<ProtectedRoute><RoleRoute allowedRoles={['manager']}><CrearTorneo estado="Nuevo" /></RoleRoute></ProtectedRoute>} />
+          <Route path="/crearTorneo" element={<ProtectedRoute><RoleRoute allowedRoles={['manager', 'ROLE_ORGANIZADOR']}><CrearTorneo estado="Nuevo" /></RoleRoute></ProtectedRoute>} />
 
-          <Route path="/TorneoGuardado/:id" element={<ProtectedRoute><RoleRoute allowedRoles={['manager']}><CrearTorneo estado="Guardado" /></RoleRoute></ProtectedRoute>} />
+          <Route path="/TorneoGuardado/:id" element={<ProtectedRoute><RoleRoute allowedRoles={['manager', 'ROLE_ORGANIZADOR']}><CrearTorneo estado="Guardado" /></RoleRoute></ProtectedRoute>} />
 
-          <Route path="/TorneoEnCurso/:id" element={<ProtectedRoute><RoleRoute allowedRoles={['manager', 'user']}><CrearTorneo estado="En curso" /></RoleRoute></ProtectedRoute>} />
+          <Route path="/TorneoEnCurso/:id" element={<ProtectedRoute><RoleRoute allowedRoles={['manager', 'ROLE_ORGANIZADOR', 'user', 'ROLE_JUGADOR']}><CrearTorneo estado="En curso" /></RoleRoute></ProtectedRoute>} />
 
-          <Route path="/TorneoFinalizado/:id" element={<ProtectedRoute><RoleRoute allowedRoles={['manager', 'user']}><CrearTorneo estado="Finalizado" /></RoleRoute></ProtectedRoute>} />
+          <Route path="/TorneoFinalizado/:id" element={<ProtectedRoute><RoleRoute allowedRoles={['manager', 'ROLE_ORGANIZADOR', 'user', 'ROLE_JUGADOR']}><CrearTorneo estado="Finalizado" /></RoleRoute></ProtectedRoute>} />
 
 
-          <Route path="/forbidden" element={<Forbidden />} /> 
+          <Route path="/forbidden" element={<Forbidden />} />
           <Route path="/" element={<HomeRedirect />} />
           <Route path="*" element={<div className="container mt-5">Página no encontrada</div>} />
         </Routes>

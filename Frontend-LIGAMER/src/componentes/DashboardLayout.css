@@ -5,16 +5,15 @@
 
 .dashboard-layout {
   display: flex;
-  flex-direction: column; /* Navbar arriba, contenido debajo */
+  flex-direction: column;
+  /* Navbar arriba, contenido debajo */
   width: 100%;
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
 }
 
 /* El navbar ocupa su propio espacio por defecto (~56px). Ajustamos el contenido para usar el resto */
 .mainContent {
   flex: 1 1 auto;
-  overflow-y: auto;
   padding: 1rem;
   width: 100%;
   box-sizing: border-box;
@@ -47,7 +46,7 @@
   justify-content: center;
 }
 
-.charts-row > * {
+.charts-row>* {
   flex: 1 1 320px;
   min-width: 280px;
   max-width: 48%;
@@ -73,10 +72,11 @@
 
 /* Ajustes móviles */
 @media (max-width: 768px) {
-  .charts-row > * {
+  .charts-row>* {
     max-width: 100%;
     flex: 1 1 100%;
   }
+
   .dashboard-container {
     padding: 1rem;
   }

@@ -37,7 +37,11 @@ export function AuthProvider({ children }) {
       const email = payload.sub;
       const authorities = payload.authorities || [];
       // Extraer el rol principal (ROLE_USUARIO, ROLE_ORGANIZADOR, ROLE_ADMINISTRADOR)
-      const role = authorities[0] || 'ROLE_USUARIO';
+      // Manejar formato [{authority: "ROLE..."}] o ["ROLE..."]
+      const firstAuth = authorities[0];
+      const role = (typeof firstAuth === 'object' && firstAuth !== null)
+        ? firstAuth.authority || 'ROLE_USUARIO'
+        : firstAuth || 'ROLE_USUARIO';
 
       // Obtener el perfil completo del usuario (incluyendo teamId)
       getProfile()
@@ -94,7 +98,10 @@ export function AuthProvider({ children }) {
     // Extraer información del JWT
     const userEmail = payload.sub;
     const authorities = payload.authorities || [];
-    const userRole = authorities[0] || 'ROLE_USUARIO';
+    const firstAuth = authorities[0];
+    const userRole = (typeof firstAuth === 'object' && firstAuth !== null)
+      ? firstAuth.authority || 'ROLE_USUARIO'
+      : firstAuth || 'ROLE_USUARIO';
 
     // Obtener el perfil completo del usuario
     try {

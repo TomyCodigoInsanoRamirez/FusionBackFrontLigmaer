@@ -13,14 +13,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(null);
-  const [failedAttempts, setFailedAttempts] = useState(() => {
-    const stored = localStorage.getItem(`failedAttempts_${username}`);
-    return stored ? parseInt(stored) : 0;
-  });
-  const [isUserDisabled, setIsUserDisabled] = useState(() => {
-    const stored = localStorage.getItem(`userDisabled_${username}`);
-    return stored === 'true';
-  });
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [isUserDisabled, setIsUserDisabled] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -45,18 +39,27 @@ export default function LoginPage() {
     navigate(targetRoute, { replace: true });
   }, [loading, user]);
 
-  // Efecto para cargar los intentos fallidos cuando cambia el username
   useEffect(() => {
-    if (username) {
-      const storedAttempts = localStorage.getItem(`failedAttempts_${username}`);
-      const storedDisabled = localStorage.getItem(`userDisabled_${username}`);
+    // Comprobar si hay una bandera de logout en localStorage
+    if (localStorage.getItem('showLogoutModal') === 'true') {
+      localStorage.removeItem('showLogoutModal'); // Limpiar bandera
 
-      setFailedAttempts(storedAttempts ? parseInt(storedAttempts) : 0);
-      setIsUserDisabled(storedDisabled === 'true');
-    } else {
-      setFailedAttempts(0);
-      setIsUserDisabled(false);
+      MySwal.fire({
+        icon: 'info',
+        title: 'Sesión cerrada',
+        text: 'Has cerrado sesión exitosamente.',
+        confirmButtonColor: '#4A3287',
+        confirmButtonText: 'Aceptar'
+      });
+      // Limpiar location state por si acaso
+      navigate('/login', { replace: true, state: {} });
     }
+  }, [location, navigate]);
+
+  // Efecto para cargar los intentos fallidos eliminado para evitar bloqueos locales persistentes
+  useEffect(() => {
+    setFailedAttempts(0);
+    setIsUserDisabled(false);
   }, [username]);
 
   if (loading) return null; // o un spinner
@@ -183,10 +186,10 @@ export default function LoginPage() {
 
                 <form onSubmit={handleSubmit}>
                   <div className="mb-3 text-start">
-                    <label className="form-label">Nombre de usuario:</label>
+                    <label className="form-label">Correo electrónico:</label>
                     <input
-                      type="text"
-                      placeholder="Introduce tu nombre de usuario"
+                      type="email"
+                      placeholder="Introduce tu correo electrónico"
                       className="form-control"
                       value={username}
                       onChange={e => setUsername(e.target.value)}

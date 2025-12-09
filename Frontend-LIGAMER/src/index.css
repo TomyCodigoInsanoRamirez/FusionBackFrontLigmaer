@@ -13,11 +13,8 @@
 /* FONDO PRINCIPAL */
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   width: 100%;
   min-height: 100vh;
-  overflow: hidden;
   position: relative;
   background: linear-gradient(to bottom, #020722 40%, #000000 100%);
 }
@@ -41,19 +38,19 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background: 
+  background:
     radial-gradient(circle, rgba(255, 255, 255, 0.9) 0.8px, transparent 1px),
     radial-gradient(circle, rgba(255, 255, 255, 0.6) 0.7px, transparent 0.9px),
     radial-gradient(circle, rgba(255, 255, 255, 0.75) 0.9px, transparent 1.1px),
     radial-gradient(circle, rgba(255, 255, 255, 0.85) 0.8px, transparent 1px),
     radial-gradient(circle, rgba(255, 255, 255, 0.7) 0.9px, transparent 1.1px);
-  background-size: 
+  background-size:
     250px 200px,
     180px 220px,
     300px 260px,
     210px 190px,
     270px 230px;
-  background-position: 
+  background-position:
     40px 60px,
     90px 30px,
     50px 110px,
@@ -72,19 +69,19 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background: 
+  background:
     radial-gradient(circle, rgba(255, 255, 255, 0.7) 1px, transparent 1.2px),
     radial-gradient(circle, rgba(255, 255, 255, 0.85) 0.9px, transparent 1.1px),
     radial-gradient(circle, rgba(255, 255, 255, 0.65) 0.8px, transparent 1px),
     radial-gradient(circle, rgba(255, 255, 255, 0.8) 1.1px, transparent 1.3px),
     radial-gradient(circle, rgba(255, 255, 255, 0.75) 0.9px, transparent 1.1px);
-  background-size: 
+  background-size:
     280px 240px,
     200px 270px,
     260px 210px,
     230px 190px,
     290px 250px;
-  background-position: 
+  background-position:
     60px 90px,
     110px 40px,
     20px 130px,
@@ -105,21 +102,21 @@ body::after {
   height: 100%;
   pointer-events: none;
   z-index: 0;
-  background: 
+  background:
     radial-gradient(circle, rgba(255, 255, 255, 0.8) 1.3px, transparent 1.5px),
     radial-gradient(circle, rgba(255, 255, 255, 0.65) 1.1px, transparent 1.3px),
     radial-gradient(circle, rgba(255, 255, 255, 0.9) 1px, transparent 1.2px),
     radial-gradient(circle, rgba(255, 255, 255, 0.7) 1.2px, transparent 1.4px),
     radial-gradient(circle, rgba(255, 255, 255, 0.85) 0.9px, transparent 1.1px),
     linear-gradient(45deg, transparent 0%, transparent 48%, rgba(255, 255, 255, 0.8) 50%, transparent 52%, transparent 100%);
-  background-size: 
+  background-size:
     270px 230px,
     190px 250px,
     310px 200px,
     220px 260px,
     280px 210px,
     300px 100px;
-  background-position: 
+  background-position:
     20px 70px,
     90px 30px,
     50px 110px,
@@ -133,45 +130,70 @@ body::after {
 
 /* ANIMACIÓN DE MOVIMIENTO LENTO */
 @keyframes drift-slow {
-  from { transform: translate(0, 0); }
-  to { transform: translate(-50vw, -50vh); }
+  from {
+    transform: translate(0, 0);
+  }
+
+  to {
+    transform: translate(-50vw, -50vh);
+  }
 }
 
 /* ANIMACIÓN DE MOVIMIENTO MEDIO */
 @keyframes drift-medium {
-  from { transform: translate(0, 0); }
-  to { transform: translate(40vw, -30vh); }
+  from {
+    transform: translate(0, 0);
+  }
+
+  to {
+    transform: translate(40vw, -30vh);
+  }
 }
 
 /* ANIMACIÓN DE MOVIMIENTO RÁPIDO */
 @keyframes drift-fast {
-  from { transform: translate(0, 0); }
-  to { transform: translate(-60vw, 25vh); }
+  from {
+    transform: translate(0, 0);
+  }
+
+  to {
+    transform: translate(-60vw, 25vh);
+  }
 }
 
 /* ANIMACIÓN DE CENTELLEO */
 @keyframes twinkle {
-  0%, 100% { opacity: 0.3; }
-  50% { opacity: 0.6; }
+
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+
+  50% {
+    opacity: 0.6;
+  }
 }
 
 /* ANIMACIÓN DE ESTRELLA FUGAZ */
 @keyframes shootingStar {
-  0% { 
-    background-position: 20px 70px, 90px 30px, 50px 110px, 70px 40px, 30px 90px, -300px -100px; 
-    opacity: 0.3; 
+  0% {
+    background-position: 20px 70px, 90px 30px, 50px 110px, 70px 40px, 30px 90px, -300px -100px;
+    opacity: 0.3;
   }
-  10% { 
-    background-position: 20px 70px, 90px 30px, 50px 110px, 70px 40px, 30px 90px, 100vw 100vh; 
-    opacity: 0.8; 
+
+  10% {
+    background-position: 20px 70px, 90px 30px, 50px 110px, 70px 40px, 30px 90px, 100vw 100vh;
+    opacity: 0.8;
   }
-  15% { 
-    background-position: 20px 70px, 90px 30px, 50px 110px, 70px 40px, 30px 90px, calc(100vw + 300px) calc(100vh + 100px); 
-    opacity: 0.3; 
+
+  15% {
+    background-position: 20px 70px, 90px 30px, 50px 110px, 70px 40px, 30px 90px, calc(100vw + 300px) calc(100vh + 100px);
+    opacity: 0.3;
   }
-  100% { 
-    background-position: 20px 70px, 90px 30px, 50px 110px, 70px 40px, 30px 90px, calc(100vw + 300px) calc(100vh + 100px); 
-    opacity: 0.3; 
+
+  100% {
+    background-position: 20px 70px, 90px 30px, 50px 110px, 70px 40px, 30px 90px, calc(100vw + 300px) calc(100vh + 100px);
+    opacity: 0.3;
   }
 }
 
@@ -201,12 +223,14 @@ button {
   cursor: pointer;
   transition: border-color 0.25s;
 }
+
 button:hover {
   border-color: #646cff;
 }
 
 @import url('https://fonts.googleapis.com/css2?family=Anton&family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&display=swap');
-*{
+
+* {
   font-family: 'ubuntu', sans-serif;
 }
 
