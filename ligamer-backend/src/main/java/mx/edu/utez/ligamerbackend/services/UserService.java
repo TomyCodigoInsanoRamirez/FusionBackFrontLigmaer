@@ -13,6 +13,9 @@ import mx.edu.utez.ligamerbackend.repositories.UserRepository;
 import mx.edu.utez.ligamerbackend.utils.AppConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -238,10 +241,10 @@ public class UserService {
     }
 
     private UserProfileDto buildUserProfileDto(User user) {
-        System.out.println("🔍 DEBUG buildUserProfileDto para usuario: " + user.getEmail());
-        System.out.println("📋 Nombre: " + user.getNombre());
-        System.out.println("📋 ApellidoPaterno: " + user.getApellidoPaterno());
-        System.out.println("📋 ApellidoMaterno: " + user.getApellidoMaterno());
+        System.out.println("DEBUG buildUserProfileDto para usuario: " + user.getEmail());
+        System.out.println("Nombre: " + user.getNombre());
+        System.out.println("ApellidoPaterno: " + user.getApellidoPaterno());
+        System.out.println("ApellidoMaterno: " + user.getApellidoMaterno());
 
         UserProfileDto dto = new UserProfileDto();
         dto.setId(user.getId());
@@ -258,25 +261,25 @@ public class UserService {
         // Buscar el equipo del que es miembro
         try {
             Team memberTeam = findTeamByMember(user);
-            System.out.println("🏆 Equipo como miembro: " + (memberTeam != null ? memberTeam.getName() : "NULL"));
+            System.out.println("Equipo como miembro: " + (memberTeam != null ? memberTeam.getName() : "NULL"));
             if (memberTeam != null) {
                 dto.setTeam(new TeamInfoDto(memberTeam.getId(), memberTeam.getName(),
                         memberTeam.getDescription(), memberTeam.getLogoUrl()));
             }
         } catch (Exception e) {
-            System.out.println("❌ Error buscando equipo como miembro: " + e.getMessage());
+            System.out.println("Error buscando equipo como miembro: " + e.getMessage());
         }
 
         // Buscar el equipo del que es propietario
         try {
             Team ownedTeam = findTeamByOwner(user);
-            System.out.println("👑 Equipo como propietario: " + (ownedTeam != null ? ownedTeam.getName() : "NULL"));
+            System.out.println("Equipo como propietario: " + (ownedTeam != null ? ownedTeam.getName() : "NULL"));
             if (ownedTeam != null) {
                 dto.setOwnedTeam(new TeamInfoDto(ownedTeam.getId(), ownedTeam.getName(),
                         ownedTeam.getDescription(), ownedTeam.getLogoUrl()));
             }
         } catch (Exception e) {
-            System.out.println("❌ Error buscando equipo como propietario: " + e.getMessage());
+            System.out.println("Error buscando equipo como propietario: " + e.getMessage());
         }
 
         return dto;
@@ -290,5 +293,38 @@ public class UserService {
     private Team findTeamByOwner(User user) {
         // Buscar el equipo del que es propietario
         return userRepository.findTeamByOwnerId(user.getId());
+    }
+
+    private User findUserByName(String nombre) {
+        return userRepository.findByNombre(nombre)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con el nombre: " + nombre));
+    }
+
+    @Transactional(readOnly = true)
+    public UserDto getUserDetailsByNombre(String nombre) {
+        User user = findUserByName(nombre);
+        UserDto dto = new UserDto();
+        dto.setNombre(user.getNombre());
+        dto.setApellidoPaterno(user.getApellidoPaterno());
+        dto.setApellidoMaterno(user.getApellidoMaterno());
+        dto.setUsername(user.getVisibleUsername());
+        dto.setEmail(user.getEmail());
+        return dto;
+    }
+
+    @Transactional(readOnly = true)
+    public UserDto getUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication.getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con el email: " + email));
+
+        UserDto dto = new UserDto();
+        dto.setNombre(user.getNombre());
+        dto.setApellidoPaterno(user.getApellidoPaterno());
+        dto.setApellidoMaterno(user.getApellidoMaterno());
+        dto.setUsername(user.getVisibleUsername());
+        dto.setEmail(user.getEmail());
+        return dto;
     }
 }

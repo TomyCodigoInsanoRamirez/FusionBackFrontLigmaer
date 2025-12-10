@@ -6,8 +6,7 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
-
-import java.nio.charset.StandardCharsets; // <-- Importante que este import esté
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
@@ -17,12 +16,10 @@ import java.util.function.Function;
 @Service
 public class JwtService {
 
-    // Tu clave generada (¡Está perfecta!)
     private static final String SECRET_KEY = "kX8Q7A19rXRaYAHj8uVkbULMt4dQqfNy";
 
     public String generateToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
-        // Agregar authorities (roles) al JWT
         claims.put("authorities", userDetails.getAuthorities().stream()
                 .map(auth -> auth.getAuthority())
                 .toList());
